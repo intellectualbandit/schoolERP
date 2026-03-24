@@ -3,8 +3,9 @@ import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import StatCard from '../../components/dashboard/StatCard';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTimeLogs } from '../../contexts/TimeLogContext';
 import {
-  Star, ClipboardCheck, Calendar, Megaphone, Heart, BookOpen,
+  Star, ClipboardCheck, Calendar, Megaphone, Heart, BookOpen, Timer, LogIn, LogOut,
 } from 'lucide-react';
 
 const myGrades = [
@@ -34,8 +35,19 @@ const announcements = [
 
 const generalAvg = (myGrades.reduce((s, g) => s + g.avg, 0) / myGrades.length).toFixed(1);
 
+function formatTime(timeStr) {
+  if (!timeStr) return '--';
+  const [h, m] = timeStr.split(':');
+  const hour = parseInt(h, 10);
+  const ampm = hour >= 12 ? 'PM' : 'AM';
+  const display = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+  return `${display}:${m} ${ampm}`;
+}
+
 export default function StudentDashboard() {
   const { user } = useAuth();
+  const { clockIn, clockOut, getTodayLog } = useTimeLogs();
+  const todayLog = getTodayLog(user?.id);
 
   return (
     <div className="space-y-6">
@@ -53,6 +65,50 @@ export default function StudentDashboard() {
         <StatCard label="Subjects" value={myGrades.length} icon={BookOpen} color="text-indigo-600" bgColor="bg-indigo-50" />
         <StatCard label="Quarter" value="Q3" icon={Calendar} color="text-blue-600" bgColor="bg-blue-50" />
       </div>
+
+      {/* Clock In/Out */}
+      <Card className="border-0 shadow-sm bg-gradient-to-r from-blue-50 to-indigo-50">
+        <CardContent className="p-5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="h-12 w-12 rounded-xl bg-blue-100 flex items-center justify-center">
+                <Timer className="h-6 w-6 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-foreground">Time Log — Today</p>
+                {todayLog ? (
+                  <div className="flex items-center gap-3 mt-1">
+                    <span className="text-xs text-muted-foreground">In: <span className="font-medium text-foreground">{formatTime(todayLog.timeIn)}</span></span>
+                    {todayLog.timeOut && (
+                      <span className="text-xs text-muted-foreground">Out: <span className="font-medium text-foreground">{formatTime(todayLog.timeOut)}</span></span>
+                    )}
+                    <Badge className={`text-xs ${todayLog.status === 'on-time' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'} border-0`}>
+                      {todayLog.status === 'on-time' ? 'On Time' : 'Late'}
+                    </Badge>
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground mt-1">You haven't clocked in yet</p>
+                )}
+              </div>
+            </div>
+            <div>
+              {!todayLog ? (
+                <Button onClick={() => clockIn(user)} className="gap-2 bg-blue-600 hover:bg-blue-700">
+                  <LogIn className="h-4 w-4" />
+                  Clock In
+                </Button>
+              ) : !todayLog.timeOut ? (
+                <Button onClick={() => clockOut(user.id)} variant="outline" className="gap-2 border-blue-300 text-blue-700 hover:bg-blue-100">
+                  <LogOut className="h-4 w-4" />
+                  Clock Out
+                </Button>
+              ) : (
+                <Badge variant="outline" className="text-xs border-blue-300 text-blue-700">Completed</Badge>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
         {/* Grades Table */}

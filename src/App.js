@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { SchoolConfigProvider } from './contexts/SchoolConfigContext';
+import { NotificationProvider } from './contexts/NotificationContext';
+import { TimeLogProvider } from './contexts/TimeLogContext';
 import ROLE_CONFIG from './data/roleConfig';
 import MainLayout from './layouts/MainLayout';
 import Login from './pages/Login';
@@ -14,6 +17,9 @@ import Behavior from './pages/Behavior';
 import Reports from './pages/Reports';
 import Alumni from './pages/Alumni';
 import Announcements from './pages/Announcements';
+import Settings from './pages/Settings';
+import TimeLogs from './pages/TimeLogs';
+import Payroll from './pages/Payroll';
 
 function AuthenticatedApp() {
   const { user, isAuthenticated, hasAccess } = useAuth();
@@ -58,6 +64,9 @@ function AuthenticatedApp() {
       case 'behavior': return <Behavior />;
       case 'alumni': return <Alumni />;
       case 'reports': return <Reports />;
+      case 'settings': return <Settings />;
+      case 'timelogs': return <TimeLogs />;
+      case 'payroll': return <Payroll />;
       default: return (
         <div className="flex items-center justify-center h-64 text-muted-foreground">
           <p className="text-lg">This module is coming soon.</p>
@@ -75,9 +84,15 @@ function AuthenticatedApp() {
 
 function App() {
   return (
-    <AuthProvider>
-      <AuthenticatedApp />
-    </AuthProvider>
+    <SchoolConfigProvider>
+      <NotificationProvider>
+        <TimeLogProvider>
+          <AuthProvider>
+            <AuthenticatedApp />
+          </AuthProvider>
+        </TimeLogProvider>
+      </NotificationProvider>
+    </SchoolConfigProvider>
   );
 }
 

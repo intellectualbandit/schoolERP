@@ -18,6 +18,7 @@ import {
   ComposedChart, Line,
 } from 'recharts';
 import { useAuth } from '../../contexts/AuthContext';
+import { Banknote } from 'lucide-react';
 
 // ─── Mock Data ───────────────────────────────────────────────
 const enrollmentTrend = [
@@ -453,6 +454,39 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Payroll Summary */}
+      <Card className="border-0 shadow-sm">
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-sm font-semibold">Payroll Overview</CardTitle>
+              <CardDescription className="text-xs">Semi-monthly payroll for 8 teachers</CardDescription>
+            </div>
+            <Banknote className="h-4 w-4 text-muted-foreground" />
+          </div>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="p-3 rounded-lg bg-indigo-50 text-center">
+              <p className="text-lg font-bold text-indigo-700">8</p>
+              <p className="text-[10px] font-medium text-muted-foreground uppercase">Employees</p>
+            </div>
+            <div className="p-3 rounded-lg bg-green-50 text-center">
+              <p className="text-lg font-bold text-green-700">₱232K</p>
+              <p className="text-[10px] font-medium text-muted-foreground uppercase">Monthly Gross</p>
+            </div>
+            <div className="p-3 rounded-lg bg-red-50 text-center">
+              <p className="text-lg font-bold text-red-700">₱30.4K</p>
+              <p className="text-[10px] font-medium text-muted-foreground uppercase">Deductions</p>
+            </div>
+            <div className="p-3 rounded-lg bg-blue-50 text-center">
+              <p className="text-lg font-bold text-blue-700">₱201.6K</p>
+              <p className="text-[10px] font-medium text-muted-foreground uppercase">Net Payout</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Department Performance + Activity + Events */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">

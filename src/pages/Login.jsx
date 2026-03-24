@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useSchoolConfig } from '../contexts/SchoolConfigContext';
 import ROLE_CONFIG from '../data/roleConfig';
 import { Card, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -12,6 +13,7 @@ import { GraduationCap, LogIn, AlertCircle, Eye, EyeOff } from 'lucide-react';
 const ROLE_DEMO_ORDER = ['admin', 'principal', 'teacher', 'student', 'parent', 'registrar', 'cashier', 'counselor'];
 
 export default function Login() {
+  const { schoolYear } = useSchoolConfig();
   const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -87,7 +89,7 @@ export default function Login() {
           </div>
         </div>
 
-        <p className="text-[11px] text-white/25 font-medium relative">A.Y. 2025 &ndash; 2026 &middot; Third Quarter</p>
+        <p className="text-[11px] text-white/25 font-medium relative">A.Y. {schoolYear.replace('-', ' \u2013 ')} &middot; Third Quarter</p>
       </div>
 
       {/* Right: Login Panel */}

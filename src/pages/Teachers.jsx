@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Search, Download, Plus, Eye, Trash2, LayoutGrid, List, AlertTriangle, BookOpen, CalendarDays, Users } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useAuth } from '../contexts/AuthContext';
+import { useSchoolConfig } from '../contexts/SchoolConfigContext';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
@@ -168,7 +169,7 @@ const initialTeachers = [
   },
 ];
 
-const departmentOptions = ['Mathematics', 'Science', 'Filipino', 'English', 'Araling Panlipunan', 'TLE', 'MAPEH'];
+// departmentOptions from SchoolConfigContext
 const employmentTypeOptions = ['Full-time', 'Part-time'];
 const statusOptions = ['Active', 'On Leave'];
 
@@ -214,6 +215,7 @@ function exportToCSV(list) {
 
 // --- Component ---
 export default function Teachers() {
+  const { departmentOptions } = useSchoolConfig();
   const { isReadOnly: checkReadOnly } = useAuth();
   const readOnly = checkReadOnly('teachers');
   const [teachers, setTeachers] = useState(initialTeachers);

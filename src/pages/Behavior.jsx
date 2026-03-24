@@ -21,17 +21,13 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '../components/ui/toolti
 import { Skeleton } from '../components/ui/skeleton';
 import { cn } from '../lib/utils';
 import { useAuth } from '../contexts/AuthContext';
+import { useSchoolConfig } from '../contexts/SchoolConfigContext';
 
 // ============================================================
 // CONSTANTS
 // ============================================================
 
-const SECTIONS = [
-  { id: 'Rizal', label: 'Grade 7 - Rizal' },
-  { id: 'Bonifacio', label: 'Grade 8 - Bonifacio' },
-  { id: 'Mabini', label: 'Grade 9 - Mabini' },
-  { id: 'Aguinaldo', label: 'Grade 10 - Aguinaldo' },
-];
+// SECTIONS from SchoolConfigContext (sectionLabels)
 
 const INCIDENT_TYPES = {
   Positive: { bg: 'bg-emerald-100', text: 'text-emerald-700', fill: 'bg-emerald-500', dot: 'bg-emerald-400', border: 'border-emerald-200', icon: ThumbsUp, label: 'Positive' },
@@ -154,6 +150,7 @@ const defaultFormState = {
 // ============================================================
 
 export default function Behavior() {
+  const { sectionLabels: SECTIONS } = useSchoolConfig();
   const { isReadOnly: checkReadOnly } = useAuth();
   const readOnly = checkReadOnly('behavior');
   const [incidents, setIncidents] = useState(initialIncidents);

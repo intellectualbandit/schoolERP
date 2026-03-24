@@ -1,6 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { cn } from '../lib/utils';
 import { useAuth } from '../contexts/AuthContext';
+import { useSchoolConfig } from '../contexts/SchoolConfigContext';
+import { useNotifications } from '../contexts/NotificationContext';
+import MOCK_USERS from '../data/mockUsers';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
@@ -8,11 +11,11 @@ import { Input } from '../components/ui/input';
 import { Select } from '../components/ui/select';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../components/ui/dialog';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Avatar, AvatarFallback } from '../components/ui/avatar';
 import { Label } from '../components/ui/label';
 import { Skeleton } from '../components/ui/skeleton';
-import { QrCode, Check, X, AlertCircle, Save, RotateCcw, Pencil, Calendar, Users, Clock, UserX, ShieldCheck, Camera } from 'lucide-react';
+import { QrCode, Check, X, AlertCircle, Save, RotateCcw, Pencil, Calendar, Users, Clock, UserX, ShieldCheck, Camera, FileText, CheckCircle, XCircle } from 'lucide-react';
 
 // --- Sample Data ---
 const classRoster = [
@@ -46,62 +49,55 @@ const initialAttendanceHistory = [
   { id: 15, date: '2026-03-19', section: 'Bonifacio', subject: 'Science', records: { 2: 'present', 6: 'absent' }, savedBy: 'Carlos Andrade Santos', savedAt: '2026-03-19T10:45:00' },
 ];
 
-const sectionOptions = ['Rizal', 'Bonifacio', 'Mabini', 'Aguinaldo'];
-const subjectOptions = ['Filipino', 'English', 'Mathematics', 'Science', 'Araling Panlipunan'];
-const sectionGradeMap = { Rizal: 'Grade 7', Bonifacio: 'Grade 8', Mabini: 'Grade 9', Aguinaldo: 'Grade 10' };
+const EXCUSE_STORAGE_KEY = 'schoolerp_excuse_requests';
 
-const statusColors = {
-  present: { bg: 'bg-green-100', text: 'text-green-700', fill: 'bg-green-500', border: 'border-green-500' },
-  late: { bg: 'bg-amber-100', text: 'text-amber-700', fill: 'bg-amber-500', border: 'border-amber-500' },
-  absent: { bg: 'bg-red-100', text: 'text-red-700', fill: 'bg-red-500', border: 'border-red-500' },
-  excused: { bg: 'bg-blue-100', text: 'text-blue-700', fill: 'bg-blue-500', border: 'border-blue-500' },
-};
+function loadExcuseRequests() {
+  try {
+    const raw = localStorage.getItem(EXCUSE_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+}
+function saveExcuseRequests(data) {
+  localStorage.setItem(EXCUSE_STORAGE_KEY, JSON.stringify(data));
+}
 
 const heatmapColors = {
-  present: 'bg-green-400',
-  late: 'bg-amber-400',
-  absent: 'bg-red-400',
-  excused: 'bg-blue-400',
-  none: 'bg-muted',
+  present: 'bg-green-400', late: 'bg-amber-400', absent: 'bg-red-400', excused: 'bg-blue-400', none: 'bg-muted',
 };
 
-// --- Helpers ---
 function getInitials(student) {
   return ((student.firstName?.[0] || '') + (student.lastName?.[0] || '')).toUpperCase();
 }
-
 function statusPriority(status) {
   const map = { absent: 3, late: 2, excused: 1, present: 0 };
   return map[status] ?? -1;
 }
-
 function computeCounts(records) {
   const counts = { present: 0, late: 0, absent: 0, excused: 0 };
   Object.values(records).forEach((s) => { if (counts[s] !== undefined) counts[s]++; });
   return counts;
 }
-
 function formatDate(dateStr) {
   if (!dateStr) return '';
   const d = new Date(dateStr + 'T00:00:00');
   return d.toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' });
 }
-
 function todayStr() {
   const d = new Date();
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 }
-
 function currentMonthStr() {
   const d = new Date();
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
 }
 
-// --- Component ---
 export default function Attendance() {
-  const { isReadOnly: checkReadOnly } = useAuth();
+  const { sectionNames: sectionOptions, subjects: subjectOptions, sectionGradeMap } = useSchoolConfig();
+  const { isReadOnly: checkReadOnly, user } = useAuth();
+  const { addNotification, notifications } = useNotifications();
   const readOnly = checkReadOnly('attendance');
   const [attendanceHistory, setAttendanceHistory] = useState(initialAttendanceHistory);
+  const [excuseRequests, setExcuseRequests] = useState(loadExcuseRequests);
   const [isLoading, setIsLoading] = useState(true);
   const [toast, setToast] = useState(null);
   const [selectedDate, setSelectedDate] = useState(todayStr());
@@ -121,38 +117,18 @@ export default function Attendance() {
   const [historySection, setHistorySection] = useState('');
   const [historySubject, setHistorySubject] = useState('');
 
-  // --- Effects ---
-  useEffect(() => {
-    const t = setTimeout(() => setIsLoading(false), 800);
-    return () => clearTimeout(t);
-  }, []);
+  useEffect(() => { const t = setTimeout(() => setIsLoading(false), 800); return () => clearTimeout(t); }, []);
+  useEffect(() => { if (!toast) return; const t = setTimeout(() => setToast(null), 3000); return () => clearTimeout(t); }, [toast]);
+  useEffect(() => { if (!lastScanned) return; const t = setTimeout(() => setLastScanned(null), 3000); return () => clearTimeout(t); }, [lastScanned]);
 
-  useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(() => setToast(null), 3000);
-    return () => clearTimeout(t);
-  }, [toast]);
-
-  useEffect(() => {
-    if (!lastScanned) return;
-    const t = setTimeout(() => setLastScanned(null), 3000);
-    return () => clearTimeout(t);
-  }, [lastScanned]);
-
-  // Load matching record when date/section/subject changes
   useEffect(() => {
     const existing = attendanceHistory.find(
       (r) => r.date === selectedDate && r.section === selectedSection && r.subject === selectedSubject
     );
-    if (existing) {
-      setCurrentRecords({ ...existing.records });
-    } else {
-      setCurrentRecords({});
-    }
+    setCurrentRecords(existing ? { ...existing.records } : {});
     setHasUnsavedChanges(false);
   }, [selectedDate, selectedSection, selectedSubject, attendanceHistory]);
 
-  // --- Computed ---
   const sectionStudents = useMemo(
     () => classRoster.filter((s) => s.section === selectedSection && s.status === 'Active'),
     [selectedSection]
@@ -210,7 +186,58 @@ export default function Attendance() {
     });
   }, [attendanceHistory, historyDateFrom, historyDateTo, historySection, historySubject]);
 
-  // --- Handlers ---
+  // --- Cumulative absence count ---
+  function getCumulativeAbsences(studentId) {
+    let count = 0;
+    attendanceHistory.forEach(r => {
+      if (r.records[studentId] === 'absent') count++;
+    });
+    return count;
+  }
+
+  // --- Notify parents and admin on absences ---
+  function notifyAbsences(records, date, section, subject) {
+    const absentIds = Object.entries(records)
+      .filter(([, status]) => status === 'absent')
+      .map(([id]) => Number(id));
+
+    absentIds.forEach(studentId => {
+      const student = classRoster.find(s => s.id === studentId);
+      if (!student) return;
+      const studentName = `${student.firstName} ${student.lastName}`;
+
+      // Find parent user with this student's id in childIds
+      const parentUser = MOCK_USERS.find(u => u.role === 'parent' && u.childIds?.includes(studentId));
+      if (parentUser) {
+        addNotification({
+          recipientKey: `parent_${parentUser.id}`,
+          type: 'absence_alert',
+          title: `Absence Alert: ${studentName}`,
+          message: `${studentName} was marked absent in ${subject} (${section}) on ${formatDate(date)}.`,
+          data: { studentId, studentName, date, section, subject },
+        });
+      }
+
+      // Check cumulative absences (including this new one)
+      const totalAbsences = getCumulativeAbsences(studentId) + 1;
+      if (totalAbsences >= 3) {
+        // Notify admin, principal, counselor
+        ['admin', 'principal', 'counselor'].forEach(role => {
+          const roleUser = MOCK_USERS.find(u => u.role === role);
+          if (roleUser) {
+            addNotification({
+              recipientKey: `${role}_${roleUser.id}`,
+              type: 'absence_threshold',
+              title: `Attendance Alert: ${studentName}`,
+              message: `${studentName} has accumulated ${totalAbsences} absences. Intervention may be needed.`,
+              data: { studentId, studentName, totalAbsences },
+            });
+          }
+        });
+      }
+    });
+  }
+
   function handleMarkStatus(studentId, status) {
     setCurrentRecords((prev) => {
       if (prev[studentId] === status) {
@@ -258,10 +285,11 @@ export default function Attendance() {
     const existingIdx = attendanceHistory.findIndex(
       (r) => r.date === selectedDate && r.section === selectedSection && r.subject === selectedSubject
     );
+    const userName = user ? `${user.firstName} ${user.lastName}` : 'Current User';
     if (existingIdx >= 0) {
       setAttendanceHistory((prev) => {
         const updated = [...prev];
-        updated[existingIdx] = { ...updated[existingIdx], records: { ...currentRecords }, savedBy: 'Current User', savedAt: new Date().toISOString() };
+        updated[existingIdx] = { ...updated[existingIdx], records: { ...currentRecords }, savedBy: userName, savedAt: new Date().toISOString() };
         return updated;
       });
     } else {
@@ -271,11 +299,15 @@ export default function Attendance() {
         section: selectedSection,
         subject: selectedSubject,
         records: { ...currentRecords },
-        savedBy: 'Current User',
+        savedBy: userName,
         savedAt: new Date().toISOString(),
       };
       setAttendanceHistory((prev) => [...prev, newRecord]);
     }
+
+    // Auto-notify parents about absences
+    notifyAbsences(currentRecords, selectedDate, selectedSection, selectedSubject);
+
     setHasUnsavedChanges(false);
     setShowSaveConfirm(false);
     setToast({ message: 'Attendance saved successfully!', type: 'success' });
@@ -301,7 +333,62 @@ export default function Attendance() {
     return Math.round((presentCount / entries.length) * 100);
   }
 
-  // --- Loading skeleton ---
+  // --- Excuse request handlers ---
+  const pendingExcuses = excuseRequests.filter(e => e.status === 'pending');
+
+  function handleApproveExcuse(excuseId) {
+    const excuse = excuseRequests.find(e => e.id === excuseId);
+    if (!excuse) return;
+
+    // Update excuse status
+    const updated = excuseRequests.map(e => e.id === excuseId ? { ...e, status: 'approved' } : e);
+    setExcuseRequests(updated);
+    saveExcuseRequests(updated);
+
+    // Update attendance record to 'excused'
+    setAttendanceHistory(prev => prev.map(r => {
+      if (r.date === excuse.date && r.section === excuse.section && r.subject === excuse.subject) {
+        return { ...r, records: { ...r.records, [excuse.studentId]: 'excused' } };
+      }
+      return r;
+    }));
+
+    // Notify the parent
+    if (excuse.parentUserId) {
+      addNotification({
+        recipientKey: `parent_${excuse.parentUserId}`,
+        type: 'excuse_response',
+        title: 'Excuse Approved',
+        message: `The excuse for ${excuse.studentName} on ${formatDate(excuse.date)} has been approved.`,
+        data: { excuseId },
+      });
+    }
+
+    setToast({ message: 'Excuse approved — record updated to "excused"', type: 'success' });
+  }
+
+  function handleDenyExcuse(excuseId) {
+    const excuse = excuseRequests.find(e => e.id === excuseId);
+    if (!excuse) return;
+
+    const updated = excuseRequests.map(e => e.id === excuseId ? { ...e, status: 'denied' } : e);
+    setExcuseRequests(updated);
+    saveExcuseRequests(updated);
+
+    if (excuse.parentUserId) {
+      addNotification({
+        recipientKey: `parent_${excuse.parentUserId}`,
+        type: 'excuse_response',
+        title: 'Excuse Denied',
+        message: `The excuse for ${excuse.studentName} on ${formatDate(excuse.date)} was not approved.`,
+        data: { excuseId },
+      });
+    }
+
+    setToast({ message: 'Excuse denied', type: 'error' });
+  }
+
+  // Loading skeleton
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -310,22 +397,15 @@ export default function Attendance() {
           <Skeleton className="h-10 w-72 rounded-lg" />
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[...Array(4)].map((_, i) => (
-            <Skeleton key={i} className="h-24 rounded-xl" />
-          ))}
+          {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-24 rounded-xl" />)}
         </div>
-        <Card>
-          <CardContent className="p-4 space-y-3">
-            {[...Array(6)].map((_, i) => (
-              <Skeleton key={i} className="h-12" />
-            ))}
-          </CardContent>
-        </Card>
+        <Card><CardContent className="p-4 space-y-3">
+          {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-12" />)}
+        </CardContent></Card>
       </div>
     );
   }
 
-  // --- Stat card config ---
   const statCards = [
     { label: 'Present', count: summaryCounts.present, icon: Check, bgClass: 'bg-green-50', borderClass: 'border-green-200', labelClass: 'text-green-600', countClass: 'text-green-700', iconBg: 'bg-green-100' },
     { label: 'Late', count: summaryCounts.late, icon: Clock, bgClass: 'bg-amber-50', borderClass: 'border-amber-200', labelClass: 'text-amber-600', countClass: 'text-amber-700', iconBg: 'bg-amber-100' },
@@ -333,10 +413,11 @@ export default function Attendance() {
     { label: 'Excused', count: summaryCounts.excused, icon: ShieldCheck, bgClass: 'bg-blue-50', borderClass: 'border-blue-200', labelClass: 'text-blue-600', countClass: 'text-blue-700', iconBg: 'bg-blue-100' },
   ];
 
-  // --- Render ---
+  const isTeacherOrAdmin = user?.role === 'teacher' || user?.role === 'admin';
+
   return (
     <div className="space-y-6">
-      {/* A. Title Row + View Tabs */}
+      {/* Title + View Tabs */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h1 className="text-2xl font-bold text-foreground">Attendance</h1>
         <Tabs value={activeView} onValueChange={setActiveView}>
@@ -344,6 +425,16 @@ export default function Attendance() {
             <TabsTrigger value="daily">Daily Marking</TabsTrigger>
             <TabsTrigger value="heatmap">Calendar Heatmap</TabsTrigger>
             <TabsTrigger value="history">History</TabsTrigger>
+            {isTeacherOrAdmin && (
+              <TabsTrigger value="excuses" className="relative">
+                Excuse Requests
+                {pendingExcuses.length > 0 && (
+                  <span className="ml-1.5 inline-flex items-center justify-center h-4 w-4 rounded-full bg-red-500 text-white text-[10px] font-bold">
+                    {pendingExcuses.length}
+                  </span>
+                )}
+              </TabsTrigger>
+            )}
           </TabsList>
         </Tabs>
       </div>
@@ -351,7 +442,6 @@ export default function Attendance() {
       {/* === DAILY VIEW === */}
       {activeView === 'daily' && (
         <>
-          {/* B. Summary Stats Bar */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {statCards.map((stat) => {
               const Icon = stat.icon;
@@ -372,65 +462,31 @@ export default function Attendance() {
             })}
           </div>
 
-          {/* C. Date/Section/Subject Selector + QR Toggle */}
           <div className="flex flex-col sm:flex-row gap-3">
-            <Input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="w-auto"
-            />
-            <Select
-              value={selectedSection}
-              onChange={(e) => setSelectedSection(e.target.value)}
-              className="w-auto"
-            >
-              {sectionOptions.map((s) => (
-                <option key={s} value={s}>{sectionGradeMap[s]} - {s}</option>
-              ))}
+            <Input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="w-auto" />
+            <Select value={selectedSection} onChange={(e) => setSelectedSection(e.target.value)} className="w-auto">
+              {sectionOptions.map((s) => <option key={s} value={s}>{sectionGradeMap[s]} - {s}</option>)}
             </Select>
-            <Select
-              value={selectedSubject}
-              onChange={(e) => setSelectedSubject(e.target.value)}
-              className="w-auto"
-            >
-              {subjectOptions.map((s) => (
-                <option key={s} value={s}>{s}</option>
-              ))}
+            <Select value={selectedSubject} onChange={(e) => setSelectedSubject(e.target.value)} className="w-auto">
+              {subjectOptions.map((s) => <option key={s} value={s}>{s}</option>)}
             </Select>
-            <Button
-              variant={isQrMode ? 'default' : 'outline'}
-              onClick={() => setIsQrMode(!isQrMode)}
-              className="gap-2"
-            >
-              <QrCode className="h-4 w-4" />
-              QR Scan
+            <Button variant={isQrMode ? 'default' : 'outline'} onClick={() => setIsQrMode(!isQrMode)} className="gap-2">
+              <QrCode className="h-4 w-4" />QR Scan
             </Button>
           </div>
 
-          {/* D. QR Scan Panel */}
           {isQrMode && (
             <Card className="border-2 border-dashed border-primary/30 bg-primary/5">
               <CardContent className="p-6 text-center">
                 <Camera className="h-10 w-10 mx-auto mb-3 text-primary/60" />
                 <p className="text-primary font-medium mb-4">Scan QR Code or type LRN below</p>
                 <div className="max-w-sm mx-auto flex gap-2">
-                  <Input
-                    type="text"
-                    value={qrInput}
-                    onChange={(e) => setQrInput(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleQrScan()}
-                    placeholder="Enter LRN..."
-                    className="flex-1 text-lg font-mono text-center"
-                  />
-                  <Button onClick={handleQrScan}>
-                    Scan
-                  </Button>
+                  <Input type="text" value={qrInput} onChange={(e) => setQrInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleQrScan()} placeholder="Enter LRN..." className="flex-1 text-lg font-mono text-center" />
+                  <Button onClick={handleQrScan}>Scan</Button>
                 </div>
                 {lastScanned && (
                   <div className="mt-4 inline-flex items-center gap-2 bg-green-100 text-green-700 px-4 py-2 rounded-lg animate-pulse">
-                    <Check className="h-5 w-5" />
-                    <span className="font-medium">{lastScanned.name}</span>
+                    <Check className="h-5 w-5" /><span className="font-medium">{lastScanned.name}</span>
                     <span className="text-sm">-- marked present at {lastScanned.timestamp}</span>
                   </div>
                 )}
@@ -438,47 +494,20 @@ export default function Attendance() {
             </Card>
           )}
 
-          {/* E. Class List -- Manual Marking */}
           {!isQrMode && (
             <>
               {sectionStudents.length === 0 ? (
-                <Card>
-                  <CardContent className="p-12 text-center">
-                    <Users className="h-10 w-10 mx-auto mb-3 text-muted-foreground/60" />
-                    <p className="text-muted-foreground font-medium">No active students in this section</p>
-                  </CardContent>
-                </Card>
+                <Card><CardContent className="p-12 text-center">
+                  <Users className="h-10 w-10 mx-auto mb-3 text-muted-foreground/60" />
+                  <p className="text-muted-foreground font-medium">No active students in this section</p>
+                </CardContent></Card>
               ) : (
                 <>
-                  {/* Quick mark buttons */}
                   <div className="flex flex-wrap gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleMarkAll('present')}
-                      className="bg-green-100 text-green-700 border-green-200 hover:bg-green-200 hover:text-green-800"
-                    >
-                      All Present
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleMarkAll('late')}
-                      className="bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-200 hover:text-amber-800"
-                    >
-                      All Late
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleMarkAll('absent')}
-                      className="bg-red-100 text-red-700 border-red-200 hover:bg-red-200 hover:text-red-800"
-                    >
-                      All Absent
-                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => handleMarkAll('present')} className="bg-green-100 text-green-700 border-green-200 hover:bg-green-200 hover:text-green-800">All Present</Button>
+                    <Button variant="outline" size="sm" onClick={() => handleMarkAll('late')} className="bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-200 hover:text-amber-800">All Late</Button>
+                    <Button variant="outline" size="sm" onClick={() => handleMarkAll('absent')} className="bg-red-100 text-red-700 border-red-200 hover:bg-red-200 hover:text-red-800">All Absent</Button>
                   </div>
-
-                  {/* Table */}
                   <Card>
                     <Table className="min-w-[600px]">
                       <TableHeader>
@@ -497,11 +526,7 @@ export default function Attendance() {
                               <TableCell className="text-muted-foreground">{idx + 1}</TableCell>
                               <TableCell>
                                 <div className="flex items-center gap-3">
-                                  <Avatar className="h-8 w-8">
-                                    <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
-                                      {getInitials(student)}
-                                    </AvatarFallback>
-                                  </Avatar>
+                                  <Avatar className="h-8 w-8"><AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">{getInitials(student)}</AvatarFallback></Avatar>
                                   <div>
                                     <p className="text-sm font-medium text-foreground">{student.lastName}, {student.firstName} {student.middleName?.[0]}.</p>
                                     <p className="text-xs text-muted-foreground">{student.gradeLevel}</p>
@@ -517,18 +542,8 @@ export default function Attendance() {
                                     { key: 'absent', letter: 'A', full: 'Absent', activeClass: 'bg-red-500 text-white hover:bg-red-600 border-red-500', hoverClass: 'hover:border-red-400 hover:text-red-600' },
                                     { key: 'excused', letter: 'E', full: 'Excused', activeClass: 'bg-blue-500 text-white hover:bg-blue-600 border-blue-500', hoverClass: 'hover:border-blue-400 hover:text-blue-600' },
                                   ].map((btn) => (
-                                    <Button
-                                      key={btn.key}
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => handleMarkStatus(student.id, btn.key)}
-                                      className={cn(
-                                        'px-2 sm:px-3 h-8 text-xs sm:text-sm',
-                                        current === btn.key
-                                          ? btn.activeClass
-                                          : cn('text-muted-foreground', btn.hoverClass)
-                                      )}
-                                    >
+                                    <Button key={btn.key} variant="outline" size="sm" onClick={() => handleMarkStatus(student.id, btn.key)}
+                                      className={cn('px-2 sm:px-3 h-8 text-xs sm:text-sm', current === btn.key ? btn.activeClass : cn('text-muted-foreground', btn.hoverClass))}>
                                       <span className="sm:hidden">{btn.letter}</span>
                                       <span className="hidden sm:inline">{btn.full}</span>
                                     </Button>
@@ -546,31 +561,18 @@ export default function Attendance() {
             </>
           )}
 
-          {/* F. Save Bar */}
           <Card>
             <CardContent className="p-3 flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 {hasUnsavedChanges && (
-                  <>
-                    <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-                    <span className="text-sm text-amber-600 font-medium">Unsaved changes</span>
-                  </>
+                  <><span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" /><span className="text-sm text-amber-600 font-medium">Unsaved changes</span></>
                 )}
               </div>
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={handleResetRecords} className="gap-2">
-                  <RotateCcw className="h-4 w-4" />
-                  Reset
-                </Button>
+                <Button variant="outline" size="sm" onClick={handleResetRecords} className="gap-2"><RotateCcw className="h-4 w-4" />Reset</Button>
                 {!readOnly && (
-                  <Button
-                    size="sm"
-                    onClick={() => setShowSaveConfirm(true)}
-                    disabled={!hasUnsavedChanges}
-                    className="gap-2"
-                  >
-                    <Save className="h-4 w-4" />
-                    Save Attendance
+                  <Button size="sm" onClick={() => setShowSaveConfirm(true)} disabled={!hasUnsavedChanges} className="gap-2">
+                    <Save className="h-4 w-4" />Save Attendance
                   </Button>
                 )}
               </div>
@@ -582,55 +584,23 @@ export default function Attendance() {
       {/* === HEATMAP VIEW === */}
       {activeView === 'heatmap' && (
         <div className="space-y-4">
-          {/* Controls */}
           <div className="flex flex-col sm:flex-row gap-3">
-            <Input
-              type="month"
-              value={heatmapMonth}
-              onChange={(e) => setHeatmapMonth(e.target.value)}
-              className="w-auto"
-            />
-            <Select
-              value={heatmapSection}
-              onChange={(e) => setHeatmapSection(e.target.value)}
-              className="w-auto"
-            >
-              {sectionOptions.map((s) => (
-                <option key={s} value={s}>{sectionGradeMap[s]} - {s}</option>
-              ))}
+            <Input type="month" value={heatmapMonth} onChange={(e) => setHeatmapMonth(e.target.value)} className="w-auto" />
+            <Select value={heatmapSection} onChange={(e) => setHeatmapSection(e.target.value)} className="w-auto">
+              {sectionOptions.map((s) => <option key={s} value={s}>{sectionGradeMap[s]} - {s}</option>)}
             </Select>
           </div>
-
-          {/* Legend */}
           <div className="flex flex-wrap gap-4 text-sm">
-            {[
-              { label: 'Present', color: 'bg-green-400' },
-              { label: 'Late', color: 'bg-amber-400' },
-              { label: 'Absent', color: 'bg-red-400' },
-              { label: 'Excused', color: 'bg-blue-400' },
-              { label: 'No Data', color: 'bg-muted' },
-            ].map((item) => (
+            {[{ label: 'Present', color: 'bg-green-400' }, { label: 'Late', color: 'bg-amber-400' }, { label: 'Absent', color: 'bg-red-400' }, { label: 'Excused', color: 'bg-blue-400' }, { label: 'No Data', color: 'bg-muted' }].map((item) => (
               <div key={item.label} className="flex items-center gap-1.5">
-                <div className={cn('w-4 h-4 rounded', item.color)} />
-                <span className="text-muted-foreground">{item.label}</span>
+                <div className={cn('w-4 h-4 rounded', item.color)} /><span className="text-muted-foreground">{item.label}</span>
               </div>
             ))}
           </div>
-
-          {/* Heatmap Grid */}
           {heatmapStudents.length === 0 ? (
-            <Card>
-              <CardContent className="p-12 text-center">
-                <Calendar className="h-10 w-10 mx-auto mb-3 text-muted-foreground/60" />
-                <p className="text-muted-foreground font-medium">No active students in this section</p>
-              </CardContent>
-            </Card>
+            <Card><CardContent className="p-12 text-center"><Calendar className="h-10 w-10 mx-auto mb-3 text-muted-foreground/60" /><p className="text-muted-foreground font-medium">No active students in this section</p></CardContent></Card>
           ) : daysInMonth.length === 0 ? (
-            <Card>
-              <CardContent className="p-12 text-center">
-                <p className="text-muted-foreground font-medium">Select a month to view the heatmap</p>
-              </CardContent>
-            </Card>
+            <Card><CardContent className="p-12 text-center"><p className="text-muted-foreground font-medium">Select a month to view the heatmap</p></CardContent></Card>
           ) : (
             <Card>
               <div className="overflow-x-auto">
@@ -638,9 +608,7 @@ export default function Attendance() {
                   <thead>
                     <tr className="border-b bg-muted/50">
                       <th className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3 py-2 sticky left-0 bg-muted/50 z-10 min-w-[140px]">Student</th>
-                      {daysInMonth.map((d) => (
-                        <th key={d} className="text-center text-xs font-semibold text-muted-foreground/60 px-0.5 py-2 w-6">{d}</th>
-                      ))}
+                      {daysInMonth.map((d) => <th key={d} className="text-center text-xs font-semibold text-muted-foreground/60 px-0.5 py-2 w-6">{d}</th>)}
                       <th className="text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3 py-2 min-w-[60px]">Rate</th>
                     </tr>
                   </thead>
@@ -649,36 +617,19 @@ export default function Attendance() {
                       const rate = getStudentMonthRate(student.id);
                       return (
                         <tr key={student.id} className="border-b border-border/50">
-                          <td className="px-3 py-2 text-sm font-medium text-foreground sticky left-0 bg-card z-10 whitespace-nowrap">
-                            {student.lastName}, {student.firstName?.[0]}.
-                          </td>
+                          <td className="px-3 py-2 text-sm font-medium text-foreground sticky left-0 bg-card z-10 whitespace-nowrap">{student.lastName}, {student.firstName?.[0]}.</td>
                           {daysInMonth.map((day) => {
                             const status = getStudentDayStatus(student.id, day);
                             return (
                               <td key={day} className="px-0.5 py-2 text-center">
-                                <div
-                                  className={cn('w-5 h-5 rounded mx-auto', status ? heatmapColors[status] : heatmapColors.none)}
-                                  title={status ? `Day ${day}: ${status}` : `Day ${day}: No data`}
-                                />
+                                <div className={cn('w-5 h-5 rounded mx-auto', status ? heatmapColors[status] : heatmapColors.none)} title={status ? `Day ${day}: ${status}` : `Day ${day}: No data`} />
                               </td>
                             );
                           })}
                           <td className="px-3 py-2 text-center">
                             {rate !== null ? (
-                              <Badge
-                                variant="outline"
-                                className={cn(
-                                  'font-bold',
-                                  rate >= 85 ? 'border-green-300 text-green-600 bg-green-50' :
-                                  rate >= 70 ? 'border-amber-300 text-amber-600 bg-amber-50' :
-                                  'border-red-300 text-red-600 bg-red-50'
-                                )}
-                              >
-                                {rate}%
-                              </Badge>
-                            ) : (
-                              <span className="text-xs text-muted-foreground">--</span>
-                            )}
+                              <Badge variant="outline" className={cn('font-bold', rate >= 85 ? 'border-green-300 text-green-600 bg-green-50' : rate >= 70 ? 'border-amber-300 text-amber-600 bg-amber-50' : 'border-red-300 text-red-600 bg-red-50')}>{rate}%</Badge>
+                            ) : <span className="text-xs text-muted-foreground">--</span>}
                           </td>
                         </tr>
                       );
@@ -694,70 +645,29 @@ export default function Attendance() {
       {/* === HISTORY VIEW === */}
       {activeView === 'history' && (
         <div className="space-y-4">
-          {/* Filter bar */}
           <div className="flex flex-col sm:flex-row gap-3">
-            <div className="flex items-center gap-2">
-              <Label className="text-muted-foreground whitespace-nowrap">From:</Label>
-              <Input
-                type="date"
-                value={historyDateFrom}
-                onChange={(e) => setHistoryDateFrom(e.target.value)}
-                className="w-auto"
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <Label className="text-muted-foreground whitespace-nowrap">To:</Label>
-              <Input
-                type="date"
-                value={historyDateTo}
-                onChange={(e) => setHistoryDateTo(e.target.value)}
-                className="w-auto"
-              />
-            </div>
-            <Select
-              value={historySection}
-              onChange={(e) => setHistorySection(e.target.value)}
-              className="w-auto"
-            >
+            <div className="flex items-center gap-2"><Label className="text-muted-foreground whitespace-nowrap">From:</Label><Input type="date" value={historyDateFrom} onChange={(e) => setHistoryDateFrom(e.target.value)} className="w-auto" /></div>
+            <div className="flex items-center gap-2"><Label className="text-muted-foreground whitespace-nowrap">To:</Label><Input type="date" value={historyDateTo} onChange={(e) => setHistoryDateTo(e.target.value)} className="w-auto" /></div>
+            <Select value={historySection} onChange={(e) => setHistorySection(e.target.value)} className="w-auto">
               <option value="">All Sections</option>
-              {sectionOptions.map((s) => (
-                <option key={s} value={s}>{s}</option>
-              ))}
+              {sectionOptions.map((s) => <option key={s} value={s}>{s}</option>)}
             </Select>
-            <Select
-              value={historySubject}
-              onChange={(e) => setHistorySubject(e.target.value)}
-              className="w-auto"
-            >
+            <Select value={historySubject} onChange={(e) => setHistorySubject(e.target.value)} className="w-auto">
               <option value="">All Subjects</option>
-              {subjectOptions.map((s) => (
-                <option key={s} value={s}>{s}</option>
-              ))}
+              {subjectOptions.map((s) => <option key={s} value={s}>{s}</option>)}
             </Select>
           </div>
-
-          {/* History Table */}
           {filteredHistory.length === 0 ? (
-            <Card>
-              <CardContent className="p-12 text-center">
-                <AlertCircle className="h-10 w-10 mx-auto mb-3 text-muted-foreground/60" />
-                <p className="text-muted-foreground font-medium">No attendance records found</p>
-              </CardContent>
-            </Card>
+            <Card><CardContent className="p-12 text-center"><AlertCircle className="h-10 w-10 mx-auto mb-3 text-muted-foreground/60" /><p className="text-muted-foreground font-medium">No attendance records found</p></CardContent></Card>
           ) : (
             <Card>
               <Table className="min-w-[600px]">
                 <TableHeader>
                   <TableRow className="bg-muted/50">
-                    <TableHead>Date</TableHead>
-                    <TableHead>Section</TableHead>
-                    <TableHead>Subject</TableHead>
-                    <TableHead className="text-center">Present</TableHead>
-                    <TableHead className="text-center">Late</TableHead>
-                    <TableHead className="text-center">Absent</TableHead>
-                    <TableHead className="text-center">Excused</TableHead>
-                    <TableHead>Saved By</TableHead>
-                    <TableHead className="text-center">Actions</TableHead>
+                    <TableHead>Date</TableHead><TableHead>Section</TableHead><TableHead>Subject</TableHead>
+                    <TableHead className="text-center">Present</TableHead><TableHead className="text-center">Late</TableHead>
+                    <TableHead className="text-center">Absent</TableHead><TableHead className="text-center">Excused</TableHead>
+                    <TableHead>Saved By</TableHead><TableHead className="text-center">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -768,28 +678,14 @@ export default function Attendance() {
                         <TableCell className="font-medium">{formatDate(record.date)}</TableCell>
                         <TableCell className="text-muted-foreground">{sectionGradeMap[record.section]} - {record.section}</TableCell>
                         <TableCell className="text-muted-foreground">{record.subject}</TableCell>
-                        <TableCell className="text-center">
-                          <Badge variant="success" className="bg-green-100 text-green-700 border-0">{counts.present}</Badge>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Badge variant="warning" className="bg-amber-100 text-amber-700 border-0">{counts.late}</Badge>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Badge variant="destructive" className="bg-red-100 text-red-700 border-0">{counts.absent}</Badge>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Badge variant="outline" className="bg-blue-100 text-blue-700 border-0">{counts.excused}</Badge>
-                        </TableCell>
+                        <TableCell className="text-center"><Badge className="bg-green-100 text-green-700 border-0">{counts.present}</Badge></TableCell>
+                        <TableCell className="text-center"><Badge className="bg-amber-100 text-amber-700 border-0">{counts.late}</Badge></TableCell>
+                        <TableCell className="text-center"><Badge className="bg-red-100 text-red-700 border-0">{counts.absent}</Badge></TableCell>
+                        <TableCell className="text-center"><Badge className="bg-blue-100 text-blue-700 border-0">{counts.excused}</Badge></TableCell>
                         <TableCell className="text-muted-foreground">{record.savedBy}</TableCell>
                         <TableCell className="text-center">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleLoadRecord(record)}
-                            className="gap-1.5 text-primary hover:text-primary"
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                            Edit
+                          <Button variant="ghost" size="sm" onClick={() => handleLoadRecord(record)} className="gap-1.5 text-primary hover:text-primary">
+                            <Pencil className="h-3.5 w-3.5" />Edit
                           </Button>
                         </TableCell>
                       </TableRow>
@@ -802,14 +698,66 @@ export default function Attendance() {
         </div>
       )}
 
-      {/* G. Save Confirmation Modal */}
+      {/* === EXCUSE REQUESTS VIEW === */}
+      {activeView === 'excuses' && isTeacherOrAdmin && (
+        <div className="space-y-4">
+          {excuseRequests.length === 0 ? (
+            <Card><CardContent className="p-12 text-center">
+              <FileText className="h-10 w-10 mx-auto mb-3 text-muted-foreground/60" />
+              <p className="text-muted-foreground font-medium">No excuse requests yet</p>
+              <p className="text-sm text-muted-foreground/60 mt-1">Parents can submit excuses from their dashboard</p>
+            </CardContent></Card>
+          ) : (
+            <Card>
+              <Table className="min-w-[700px]">
+                <TableHeader>
+                  <TableRow className="bg-muted/50">
+                    <TableHead>Student</TableHead><TableHead>Date</TableHead><TableHead>Section</TableHead>
+                    <TableHead>Subject</TableHead><TableHead>Reason</TableHead><TableHead>Note</TableHead>
+                    <TableHead className="text-center">Status</TableHead><TableHead className="text-center">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {excuseRequests.map((excuse) => (
+                    <TableRow key={excuse.id}>
+                      <TableCell className="font-medium">{excuse.studentName}</TableCell>
+                      <TableCell className="text-muted-foreground">{formatDate(excuse.date)}</TableCell>
+                      <TableCell className="text-muted-foreground">{excuse.section}</TableCell>
+                      <TableCell className="text-muted-foreground">{excuse.subject}</TableCell>
+                      <TableCell><Badge variant="outline" className="text-xs">{excuse.reason}</Badge></TableCell>
+                      <TableCell className="text-muted-foreground text-xs max-w-[150px] truncate">{excuse.note || '--'}</TableCell>
+                      <TableCell className="text-center">
+                        <Badge className={cn('text-xs', excuse.status === 'pending' ? 'bg-amber-100 text-amber-700 border-0' : excuse.status === 'approved' ? 'bg-green-100 text-green-700 border-0' : 'bg-red-100 text-red-700 border-0')}>
+                          {excuse.status === 'pending' ? 'Pending' : excuse.status === 'approved' ? 'Approved' : 'Denied'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {excuse.status === 'pending' ? (
+                          <div className="flex items-center justify-center gap-1">
+                            <Button variant="ghost" size="sm" onClick={() => handleApproveExcuse(excuse.id)} className="gap-1 text-green-600 hover:text-green-700 hover:bg-green-50">
+                              <CheckCircle className="h-3.5 w-3.5" />Approve
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={() => handleDenyExcuse(excuse.id)} className="gap-1 text-red-600 hover:text-red-700 hover:bg-red-50">
+                              <XCircle className="h-3.5 w-3.5" />Deny
+                            </Button>
+                          </div>
+                        ) : <span className="text-xs text-muted-foreground">--</span>}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Card>
+          )}
+        </div>
+      )}
+
+      {/* Save Confirmation Modal */}
       <Dialog open={showSaveConfirm} onOpenChange={setShowSaveConfirm}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>Confirm Save</DialogTitle>
-            <DialogDescription>
-              Review the attendance details before saving.
-            </DialogDescription>
+            <DialogDescription>Review the attendance details before saving.</DialogDescription>
           </DialogHeader>
           <div className="space-y-2 text-sm text-muted-foreground">
             <p><span className="font-medium text-foreground">Date:</span> {formatDate(selectedDate)}</p>
@@ -818,31 +766,18 @@ export default function Attendance() {
             <p><span className="font-medium text-foreground">Students:</span> {Object.keys(currentRecords).length} marked</p>
           </div>
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setShowSaveConfirm(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSaveAttendance}>
-              <Save className="h-4 w-4 mr-2" />
-              Confirm Save
-            </Button>
+            <Button variant="outline" onClick={() => setShowSaveConfirm(false)}>Cancel</Button>
+            <Button onClick={handleSaveAttendance}><Save className="h-4 w-4 mr-2" />Confirm Save</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* J. Toast Notification */}
+      {/* Toast */}
       {toast && (
         <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom-5 fade-in duration-300">
-          <Card className={cn(
-            'flex items-center gap-3 px-4 py-3 shadow-lg',
-            toast.type === 'success'
-              ? 'border-green-200 bg-green-50 text-green-800'
-              : 'border-red-200 bg-red-50 text-red-800'
-          )}>
-            {toast.type === 'success' ? (
-              <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
-            ) : (
-              <X className="h-5 w-5 text-red-500 flex-shrink-0" />
-            )}
+          <Card className={cn('flex items-center gap-3 px-4 py-3 shadow-lg',
+            toast.type === 'success' ? 'border-green-200 bg-green-50 text-green-800' : 'border-red-200 bg-red-50 text-red-800')}>
+            {toast.type === 'success' ? <Check className="h-5 w-5 text-green-500 flex-shrink-0" /> : <X className="h-5 w-5 text-red-500 flex-shrink-0" />}
             <p className="text-sm font-medium">{toast.message}</p>
           </Card>
         </div>

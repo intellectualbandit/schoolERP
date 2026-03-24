@@ -12,6 +12,9 @@ import {
   Award,
   FileText,
   LogOut,
+  Settings as SettingsIcon,
+  Timer,
+  Banknote,
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { Avatar, AvatarFallback } from './ui/avatar';
@@ -19,6 +22,7 @@ import { Button } from './ui/button';
 import { Separator } from './ui/separator';
 import { useAuth } from '../contexts/AuthContext';
 import ROLE_CONFIG from '../data/roleConfig';
+import { useSchoolConfig } from '../contexts/SchoolConfigContext';
 
 const allMenuItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -32,10 +36,14 @@ const allMenuItems = [
   { id: 'wellness', label: 'Wellness', icon: Heart },
   { id: 'alumni', label: 'Alumni', icon: Award },
   { id: 'reports', label: 'DepEd Reports', icon: FileText },
+  { id: 'timelogs', label: 'Time Logs', icon: Timer },
+  { id: 'payroll', label: 'Payroll', icon: Banknote },
+  { id: 'settings', label: 'Settings', icon: SettingsIcon },
 ];
 
 export default function Sidebar({ active, setActive, isOpen, setIsOpen }) {
   const { user, logout } = useAuth();
+  const { schoolYear } = useSchoolConfig();
   const roleConfig = user ? ROLE_CONFIG[user.role] : null;
   const allowedPages = roleConfig?.allowedPages || [];
 
@@ -72,7 +80,7 @@ export default function Sidebar({ active, setActive, isOpen, setIsOpen }) {
             </div>
             <div>
               <h1 className="text-sidebar-foreground font-bold text-[15px] tracking-tight leading-none">SchoolERP</h1>
-              <p className="text-sidebar-foreground/40 text-[10px] mt-0.5 tracking-wide uppercase font-medium">A.Y. 2025 – 2026</p>
+              <p className="text-sidebar-foreground/40 text-[10px] mt-0.5 tracking-wide uppercase font-medium">A.Y. {schoolYear.replace('-', ' – ')}</p>
             </div>
           </div>
         </div>

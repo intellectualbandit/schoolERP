@@ -1,6 +1,6 @@
 import {
   Shield, GraduationCap, BookOpen, Users, UserCheck,
-  ClipboardList, Wallet, Heart,
+  ClipboardList, Wallet, Heart, Timer, Banknote,
 } from 'lucide-react';
 
 // Permission levels: 'rw' = read-write, 'r' = read-only, 'r*' = read scoped to own data, 'rw*' = rw scoped, 'r+' = read + can create
@@ -13,11 +13,12 @@ const ROLE_CONFIG = {
     color: 'bg-red-100 text-red-700 border-red-200',
     badgeColor: 'bg-red-500',
     icon: Shield,
-    allowedPages: ['dashboard','students','teachers','attendance','grades','fees','announcements','behavior','wellness','alumni','reports'],
+    allowedPages: ['dashboard','students','teachers','attendance','grades','fees','announcements','behavior','wellness','alumni','reports','settings','timelogs','payroll'],
     permissions: {
       dashboard: 'rw', students: 'rw', teachers: 'rw', attendance: 'rw',
       grades: 'rw', fees: 'rw', announcements: 'rw', behavior: 'rw',
-      wellness: 'rw', alumni: 'rw', reports: 'rw',
+      wellness: 'rw', alumni: 'rw', reports: 'rw', settings: 'rw',
+      timelogs: 'rw', payroll: 'rw',
     },
   },
   principal: {
@@ -26,11 +27,11 @@ const ROLE_CONFIG = {
     color: 'bg-indigo-100 text-indigo-700 border-indigo-200',
     badgeColor: 'bg-indigo-500',
     icon: GraduationCap,
-    allowedPages: ['dashboard','students','teachers','attendance','grades','fees','announcements','behavior','wellness','alumni','reports'],
+    allowedPages: ['dashboard','students','teachers','attendance','grades','fees','announcements','behavior','wellness','alumni','reports','timelogs'],
     permissions: {
       dashboard: 'r', students: 'r', teachers: 'r', attendance: 'r',
       grades: 'r', fees: 'r', announcements: 'rw', behavior: 'r',
-      wellness: 'r', alumni: 'r', reports: 'r',
+      wellness: 'r', alumni: 'r', reports: 'r', timelogs: 'r',
     },
   },
   teacher: {
@@ -39,11 +40,11 @@ const ROLE_CONFIG = {
     color: 'bg-emerald-100 text-emerald-700 border-emerald-200',
     badgeColor: 'bg-emerald-500',
     icon: BookOpen,
-    allowedPages: ['dashboard','students','attendance','grades','announcements','behavior','wellness'],
+    allowedPages: ['dashboard','students','attendance','grades','announcements','behavior','wellness','timelogs'],
     permissions: {
       dashboard: 'r', students: 'r*', attendance: 'rw*',
       grades: 'rw*', announcements: 'r+', behavior: 'rw*',
-      wellness: 'r*',
+      wellness: 'r*', timelogs: 'rw*',
     },
   },
   student: {
@@ -52,10 +53,10 @@ const ROLE_CONFIG = {
     color: 'bg-blue-100 text-blue-700 border-blue-200',
     badgeColor: 'bg-blue-500',
     icon: Users,
-    allowedPages: ['dashboard','attendance','grades','fees','announcements','wellness'],
+    allowedPages: ['dashboard','attendance','grades','fees','announcements','wellness','timelogs'],
     permissions: {
       dashboard: 'r', attendance: 'r*', grades: 'r*',
-      fees: 'r*', announcements: 'r', wellness: 'rw*',
+      fees: 'r*', announcements: 'r', wellness: 'rw*', timelogs: 'rw*',
     },
   },
   parent: {

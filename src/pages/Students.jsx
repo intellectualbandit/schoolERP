@@ -17,6 +17,9 @@ import { Checkbox } from '../components/ui/checkbox';
 import { Progress } from '../components/ui/progress';
 import { cn } from '../lib/utils';
 import { useAuth } from '../contexts/AuthContext';
+import { useSchoolConfig } from '../contexts/SchoolConfigContext';
+import { useNotifications } from '../contexts/NotificationContext';
+import MOCK_USERS from '../data/mockUsers';
 
 // --- Sample Data ---
 const initialStudents = [
@@ -265,8 +268,7 @@ const initialStudents = [
   },
 ];
 
-const gradeOptions = ['Grade 7', 'Grade 8', 'Grade 9', 'Grade 10'];
-const sectionOptions = ['Rizal', 'Bonifacio', 'Mabini', 'Aguinaldo'];
+// gradeOptions, sectionOptions from SchoolConfigContext
 const statusOptions = ['Active', 'Inactive'];
 
 const emptyForm = {
@@ -280,6 +282,30 @@ const emptyForm = {
   section: '',
   guardianName: '',
   guardianContact: '',
+  guardianEmail: '',
+};
+
+const feeSchedule = {
+  'Grade 7': [
+    { type: 'Tuition', amount: 7500 },
+    { type: 'Miscellaneous', amount: 1650 },
+    { type: 'Laboratory', amount: 1000 },
+  ],
+  'Grade 8': [
+    { type: 'Tuition', amount: 8200 },
+    { type: 'Miscellaneous', amount: 1750 },
+    { type: 'Laboratory', amount: 1000 },
+  ],
+  'Grade 9': [
+    { type: 'Tuition', amount: 9200 },
+    { type: 'Miscellaneous', amount: 1850 },
+    { type: 'Laboratory', amount: 1200 },
+  ],
+  'Grade 10': [
+    { type: 'Tuition', amount: 10000 },
+    { type: 'Miscellaneous', amount: 1950 },
+    { type: 'Laboratory', amount: 1200 },
+  ],
 };
 
 // --- Helpers ---
@@ -310,7 +336,9 @@ function exportToCSV(list) {
 
 // --- Component ---
 export default function Students() {
+  const { gradeLevels: gradeOptions, sectionNames: sectionOptions } = useSchoolConfig();
   const { user, isReadOnly: checkReadOnly } = useAuth();
+  const { addNotification } = useNotifications();
   const readOnly = checkReadOnly('students');
   const [students, setStudents] = useState(initialStudents);
   const [isLoading, setIsLoading] = useState(true);
@@ -326,6 +354,7 @@ export default function Students() {
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [toast, setToast] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
+  const [wizardStep, setWizardStep] = useState(1);
 
   // Simulated loading
   useEffect(() => {
@@ -369,28 +398,49 @@ export default function Students() {
     filteredStudents.every(s => selectedIds.has(s.id));
 
   // --- Handlers ---
-  function handleAddStudent() {
+  function validateWizardStep(step) {
     const errors = {};
-    if (!newStudent.firstName.trim()) errors.firstName = 'Required';
-    if (!newStudent.lastName.trim()) errors.lastName = 'Required';
-    if (!newStudent.lrn.trim()) {
-      errors.lrn = 'Required';
-    } else if (!/^\d{12}$/.test(newStudent.lrn.trim())) {
-      errors.lrn = 'Must be 12 digits';
-    } else if (students.some(s => s.lrn === newStudent.lrn.trim())) {
-      errors.lrn = 'LRN already exists';
+    if (step === 1) {
+      if (!newStudent.firstName.trim()) errors.firstName = 'Required';
+      if (!newStudent.lastName.trim()) errors.lastName = 'Required';
+      if (!newStudent.lrn.trim()) {
+        errors.lrn = 'Required';
+      } else if (!/^\d{12}$/.test(newStudent.lrn.trim())) {
+        errors.lrn = 'Must be 12 digits';
+      } else if (students.some(s => s.lrn === newStudent.lrn.trim())) {
+        errors.lrn = 'LRN already exists';
+      }
+      if (!newStudent.dateOfBirth) errors.dateOfBirth = 'Required';
+      if (!newStudent.gender) errors.gender = 'Required';
+    } else if (step === 2) {
+      if (!newStudent.gradeLevel) errors.gradeLevel = 'Required';
+      if (!newStudent.section) errors.section = 'Required';
+    } else if (step === 3) {
+      if (!newStudent.guardianName.trim()) errors.guardianName = 'Required';
+      if (!newStudent.guardianContact.trim()) errors.guardianContact = 'Required';
     }
-    if (!newStudent.dateOfBirth) errors.dateOfBirth = 'Required';
-    if (!newStudent.gender) errors.gender = 'Required';
-    if (!newStudent.gradeLevel) errors.gradeLevel = 'Required';
-    if (!newStudent.section) errors.section = 'Required';
-    if (!newStudent.guardianName.trim()) errors.guardianName = 'Required';
-    if (!newStudent.guardianContact.trim()) errors.guardianContact = 'Required';
+    return errors;
+  }
 
+  function handleWizardNext() {
+    const errors = validateWizardStep(wizardStep);
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
       return;
     }
+    setFormErrors({});
+    setWizardStep(prev => prev + 1);
+  }
+
+  function handleWizardBack() {
+    setFormErrors({});
+    setWizardStep(prev => prev - 1);
+  }
+
+  function handleEnrollStudent() {
+    const assignedFees = (feeSchedule[newStudent.gradeLevel] || []).map(f => ({
+      ...f, paid: 0, status: 'Unpaid',
+    }));
 
     const created = {
       ...newStudent,
@@ -401,18 +451,32 @@ export default function Students() {
       guardianName: newStudent.guardianName.trim(),
       guardianContact: newStudent.guardianContact.trim(),
       id: Date.now(),
-      status: 'Active',
+      status: 'Enrolled',
       enrolledDate: new Date().toISOString().split('T')[0],
       grades: [],
       attendance: { present: 0, absent: 0, late: 0, total: 0 },
-      fees: [],
+      fees: assignedFees,
     };
 
     setStudents(prev => [...prev, created]);
+
+    // Notify admin about new enrollment
+    const adminUser = MOCK_USERS.find(u => u.role === 'admin');
+    if (adminUser) {
+      addNotification({
+        recipientKey: `admin_${adminUser.id}`,
+        type: 'enrollment',
+        title: `New Enrollment: ${created.firstName} ${created.lastName}`,
+        message: `${created.firstName} ${created.lastName} has been enrolled in ${created.gradeLevel} - ${created.section}. Total fees: ₱${assignedFees.reduce((s, f) => s + f.amount, 0).toLocaleString()}.`,
+        data: { studentId: created.id },
+      });
+    }
+
     setShowAddModal(false);
     setNewStudent(emptyForm);
     setFormErrors({});
-    setToast({ message: 'Student added successfully', type: 'success' });
+    setWizardStep(1);
+    setToast({ message: 'Student enrolled successfully!', type: 'success' });
   }
 
   // TODO: Role check — only Admin and Registrar should be able to delete students
@@ -507,9 +571,9 @@ export default function Students() {
             Export CSV
           </Button>
           {!readOnly && (
-            <Button size="sm" onClick={() => setShowAddModal(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Student
+            <Button size="sm" onClick={() => { setShowAddModal(true); setWizardStep(1); setNewStudent(emptyForm); setFormErrors({}); }}>
+              <UserPlus className="h-4 w-4 mr-2" />
+              Enroll Student
             </Button>
           )}
         </div>
@@ -732,165 +796,172 @@ export default function Students() {
         </p>
       )}
 
-      {/* E. Add Student Modal */}
+      {/* E. Enrollment Wizard Modal */}
       <Dialog open={showAddModal} onOpenChange={(open) => {
-        if (!open) {
-          setShowAddModal(false);
-          setNewStudent(emptyForm);
-          setFormErrors({});
-        }
+        if (!open) { setShowAddModal(false); setNewStudent(emptyForm); setFormErrors({}); setWizardStep(1); }
       }}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Add New Student</DialogTitle>
+            <DialogTitle>Enroll New Student</DialogTitle>
             <DialogDescription>
-              Fill in the details below to enroll a new student.
+              Step {wizardStep} of 4 — {['Personal Info', 'Academic Info', 'Guardian Info', 'Review & Confirm'][wizardStep - 1]}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-2">
-            {/* Name row */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="firstName">First Name *</Label>
-                <Input
-                  id="firstName"
-                  type="text"
-                  value={newStudent.firstName}
-                  onChange={e => setNewStudent(p => ({ ...p, firstName: e.target.value }))}
-                  className={cn(formErrors.firstName && 'border-red-400')}
-                />
-                {formErrors.firstName && <p className="text-xs text-red-500">{formErrors.firstName}</p>}
+
+          {/* Progress indicator */}
+          <div className="flex items-center justify-center gap-2 py-2">
+            {[1, 2, 3, 4].map(step => (
+              <div key={step} className="flex items-center gap-2">
+                <div className={cn(
+                  'h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-colors',
+                  wizardStep === step ? 'border-primary bg-primary text-white' :
+                  wizardStep > step ? 'border-green-500 bg-green-500 text-white' :
+                  'border-muted-foreground/30 text-muted-foreground'
+                )}>
+                  {wizardStep > step ? <CheckCircle className="h-4 w-4" /> : step}
+                </div>
+                {step < 4 && <div className={cn('w-8 h-0.5', wizardStep > step ? 'bg-green-500' : 'bg-muted-foreground/20')} />}
+              </div>
+            ))}
+          </div>
+
+          {/* Step 1: Personal Info */}
+          {wizardStep === 1 && (
+            <div className="space-y-4 py-2">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>First Name *</Label>
+                  <Input value={newStudent.firstName} onChange={e => setNewStudent(p => ({ ...p, firstName: e.target.value }))} className={cn(formErrors.firstName && 'border-red-400')} />
+                  {formErrors.firstName && <p className="text-xs text-red-500">{formErrors.firstName}</p>}
+                </div>
+                <div className="space-y-2">
+                  <Label>Last Name *</Label>
+                  <Input value={newStudent.lastName} onChange={e => setNewStudent(p => ({ ...p, lastName: e.target.value }))} className={cn(formErrors.lastName && 'border-red-400')} />
+                  {formErrors.lastName && <p className="text-xs text-red-500">{formErrors.lastName}</p>}
+                </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="lastName">Last Name *</Label>
-                <Input
-                  id="lastName"
-                  type="text"
-                  value={newStudent.lastName}
-                  onChange={e => setNewStudent(p => ({ ...p, lastName: e.target.value }))}
-                  className={cn(formErrors.lastName && 'border-red-400')}
-                />
-                {formErrors.lastName && <p className="text-xs text-red-500">{formErrors.lastName}</p>}
-              </div>
-            </div>
-            {/* Middle name */}
-            <div className="space-y-2">
-              <Label htmlFor="middleName">Middle Name</Label>
-              <Input
-                id="middleName"
-                type="text"
-                value={newStudent.middleName}
-                onChange={e => setNewStudent(p => ({ ...p, middleName: e.target.value }))}
-              />
-            </div>
-            {/* LRN */}
-            <div className="space-y-2">
-              <Label htmlFor="lrn">LRN (Learner Reference Number) *</Label>
-              <Input
-                id="lrn"
-                type="text"
-                maxLength={12}
-                value={newStudent.lrn}
-                onChange={e => setNewStudent(p => ({ ...p, lrn: e.target.value }))}
-                className={cn(formErrors.lrn && 'border-red-400')}
-                placeholder="12-digit number"
-              />
-              {formErrors.lrn && <p className="text-xs text-red-500">{formErrors.lrn}</p>}
-            </div>
-            {/* DOB + Gender */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="dateOfBirth">Date of Birth *</Label>
-                <Input
-                  id="dateOfBirth"
-                  type="date"
-                  value={newStudent.dateOfBirth}
-                  onChange={e => setNewStudent(p => ({ ...p, dateOfBirth: e.target.value }))}
-                  className={cn(formErrors.dateOfBirth && 'border-red-400')}
-                />
-                {formErrors.dateOfBirth && <p className="text-xs text-red-500">{formErrors.dateOfBirth}</p>}
+                <Label>Middle Name</Label>
+                <Input value={newStudent.middleName} onChange={e => setNewStudent(p => ({ ...p, middleName: e.target.value }))} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="gender">Gender *</Label>
-                <Select
-                  id="gender"
-                  value={newStudent.gender}
-                  onChange={e => setNewStudent(p => ({ ...p, gender: e.target.value }))}
-                  className={cn(formErrors.gender && 'border-red-400')}
-                >
-                  <option value="">Select</option>
-                  <option value="Male">Male</option>
-                  <option value="Female">Female</option>
-                </Select>
-                {formErrors.gender && <p className="text-xs text-red-500">{formErrors.gender}</p>}
+                <Label>LRN (Learner Reference Number) *</Label>
+                <Input maxLength={12} value={newStudent.lrn} onChange={e => setNewStudent(p => ({ ...p, lrn: e.target.value }))} className={cn(formErrors.lrn && 'border-red-400')} placeholder="12-digit number" />
+                {formErrors.lrn && <p className="text-xs text-red-500">{formErrors.lrn}</p>}
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Date of Birth *</Label>
+                  <Input type="date" value={newStudent.dateOfBirth} onChange={e => setNewStudent(p => ({ ...p, dateOfBirth: e.target.value }))} className={cn(formErrors.dateOfBirth && 'border-red-400')} />
+                  {formErrors.dateOfBirth && <p className="text-xs text-red-500">{formErrors.dateOfBirth}</p>}
+                </div>
+                <div className="space-y-2">
+                  <Label>Gender *</Label>
+                  <Select value={newStudent.gender} onChange={e => setNewStudent(p => ({ ...p, gender: e.target.value }))} className={cn(formErrors.gender && 'border-red-400')}>
+                    <option value="">Select</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                  </Select>
+                  {formErrors.gender && <p className="text-xs text-red-500">{formErrors.gender}</p>}
+                </div>
               </div>
             </div>
-            {/* Grade + Section */}
-            <div className="grid grid-cols-2 gap-4">
+          )}
+
+          {/* Step 2: Academic Info */}
+          {wizardStep === 2 && (
+            <div className="space-y-4 py-2">
               <div className="space-y-2">
-                <Label htmlFor="gradeLevel">Grade Level *</Label>
-                <Select
-                  id="gradeLevel"
-                  value={newStudent.gradeLevel}
-                  onChange={e => setNewStudent(p => ({ ...p, gradeLevel: e.target.value }))}
-                  className={cn(formErrors.gradeLevel && 'border-red-400')}
-                >
+                <Label>Grade Level *</Label>
+                <Select value={newStudent.gradeLevel} onChange={e => setNewStudent(p => ({ ...p, gradeLevel: e.target.value }))} className={cn(formErrors.gradeLevel && 'border-red-400')}>
                   <option value="">Select</option>
                   {gradeOptions.map(g => <option key={g} value={g}>{g}</option>)}
                 </Select>
                 {formErrors.gradeLevel && <p className="text-xs text-red-500">{formErrors.gradeLevel}</p>}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="section">Section *</Label>
-                <Select
-                  id="section"
-                  value={newStudent.section}
-                  onChange={e => setNewStudent(p => ({ ...p, section: e.target.value }))}
-                  className={cn(formErrors.section && 'border-red-400')}
-                >
+                <Label>Section *</Label>
+                <Select value={newStudent.section} onChange={e => setNewStudent(p => ({ ...p, section: e.target.value }))} className={cn(formErrors.section && 'border-red-400')}>
                   <option value="">Select</option>
                   {sectionOptions.map(s => <option key={s} value={s}>{s}</option>)}
                 </Select>
                 {formErrors.section && <p className="text-xs text-red-500">{formErrors.section}</p>}
               </div>
             </div>
-            {/* Guardian */}
-            <div className="grid grid-cols-2 gap-4">
+          )}
+
+          {/* Step 3: Guardian Info */}
+          {wizardStep === 3 && (
+            <div className="space-y-4 py-2">
               <div className="space-y-2">
-                <Label htmlFor="guardianName">Guardian Name *</Label>
-                <Input
-                  id="guardianName"
-                  type="text"
-                  value={newStudent.guardianName}
-                  onChange={e => setNewStudent(p => ({ ...p, guardianName: e.target.value }))}
-                  className={cn(formErrors.guardianName && 'border-red-400')}
-                />
+                <Label>Guardian Name *</Label>
+                <Input value={newStudent.guardianName} onChange={e => setNewStudent(p => ({ ...p, guardianName: e.target.value }))} className={cn(formErrors.guardianName && 'border-red-400')} />
                 {formErrors.guardianName && <p className="text-xs text-red-500">{formErrors.guardianName}</p>}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="guardianContact">Guardian Contact *</Label>
-                <Input
-                  id="guardianContact"
-                  type="text"
-                  value={newStudent.guardianContact}
-                  onChange={e => setNewStudent(p => ({ ...p, guardianContact: e.target.value }))}
-                  className={cn(formErrors.guardianContact && 'border-red-400')}
-                />
+                <Label>Guardian Contact *</Label>
+                <Input value={newStudent.guardianContact} onChange={e => setNewStudent(p => ({ ...p, guardianContact: e.target.value }))} className={cn(formErrors.guardianContact && 'border-red-400')} />
                 {formErrors.guardianContact && <p className="text-xs text-red-500">{formErrors.guardianContact}</p>}
               </div>
+              <div className="space-y-2">
+                <Label>Guardian Email (optional)</Label>
+                <Input type="email" value={newStudent.guardianEmail} onChange={e => setNewStudent(p => ({ ...p, guardianEmail: e.target.value }))} placeholder="email@example.com" />
+              </div>
             </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => { setShowAddModal(false); setNewStudent(emptyForm); setFormErrors({}); }}
-            >
-              Cancel
-            </Button>
-            <Button onClick={handleAddStudent}>
-              <UserPlus className="h-4 w-4 mr-2" />
-              Save Student
-            </Button>
+          )}
+
+          {/* Step 4: Review + Fee Assignment */}
+          {wizardStep === 4 && (
+            <div className="space-y-4 py-2">
+              <Card className="bg-muted/30">
+                <CardContent className="p-4 space-y-3">
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                    <div><span className="text-muted-foreground">Name:</span> <span className="font-medium">{newStudent.firstName} {newStudent.middleName ? newStudent.middleName + ' ' : ''}{newStudent.lastName}</span></div>
+                    <div><span className="text-muted-foreground">LRN:</span> <span className="font-mono font-medium">{newStudent.lrn}</span></div>
+                    <div><span className="text-muted-foreground">DOB:</span> <span className="font-medium">{newStudent.dateOfBirth}</span></div>
+                    <div><span className="text-muted-foreground">Gender:</span> <span className="font-medium">{newStudent.gender}</span></div>
+                    <div><span className="text-muted-foreground">Grade:</span> <span className="font-medium">{newStudent.gradeLevel}</span></div>
+                    <div><span className="text-muted-foreground">Section:</span> <span className="font-medium">{newStudent.section}</span></div>
+                    <div><span className="text-muted-foreground">Guardian:</span> <span className="font-medium">{newStudent.guardianName}</span></div>
+                    <div><span className="text-muted-foreground">Contact:</span> <span className="font-medium">{newStudent.guardianContact}</span></div>
+                  </div>
+                </CardContent>
+              </Card>
+              <div>
+                <p className="text-sm font-semibold mb-2">Auto-Assigned Fees ({newStudent.gradeLevel})</p>
+                <Card>
+                  <CardContent className="p-3 space-y-2">
+                    {(feeSchedule[newStudent.gradeLevel] || []).map(f => (
+                      <div key={f.type} className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">{f.type}</span>
+                        <span className="font-semibold">₱{f.amount.toLocaleString()}</span>
+                      </div>
+                    ))}
+                    <Separator />
+                    <div className="flex items-center justify-between text-sm font-bold">
+                      <span>Total</span>
+                      <span className="text-primary">₱{(feeSchedule[newStudent.gradeLevel] || []).reduce((s, f) => s + f.amount, 0).toLocaleString()}</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            {wizardStep > 1 && (
+              <Button variant="outline" onClick={handleWizardBack}>Back</Button>
+            )}
+            {wizardStep === 1 && (
+              <Button variant="outline" onClick={() => { setShowAddModal(false); setNewStudent(emptyForm); setFormErrors({}); setWizardStep(1); }}>Cancel</Button>
+            )}
+            {wizardStep < 4 ? (
+              <Button onClick={handleWizardNext}>Next</Button>
+            ) : (
+              <Button onClick={handleEnrollStudent} className="gap-2">
+                <CheckCircle className="h-4 w-4" />Confirm Enrollment
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -1,10 +1,27 @@
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
+import { Button } from '../../components/ui/button';
+import { Select } from '../../components/ui/select';
+import { Input } from '../../components/ui/input';
+import { Label } from '../../components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../../components/ui/dialog';
 import StatCard from '../../components/dashboard/StatCard';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNotifications } from '../../contexts/NotificationContext';
+import MOCK_USERS from '../../data/mockUsers';
 import {
-  Star, ClipboardCheck, Wallet, Megaphone, AlertTriangle, Users,
+  Star, ClipboardCheck, Wallet, Megaphone, AlertTriangle, Users, FileText, Send,
 } from 'lucide-react';
+
+const EXCUSE_STORAGE_KEY = 'schoolerp_excuse_requests';
+
+function loadExcuseRequests() {
+  try { return JSON.parse(localStorage.getItem(EXCUSE_STORAGE_KEY)) || []; } catch { return []; }
+}
+function saveExcuseRequests(data) {
+  localStorage.setItem(EXCUSE_STORAGE_KEY, JSON.stringify(data));
+}
 
 const childGrades = [
   { subject: 'Filipino', q1: 88, q2: 85, q3: 90 },
@@ -37,8 +54,74 @@ const attendanceRate = ((childAttendance.present / childAttendance.total) * 100)
 const totalFees = feeBalance.reduce((s, f) => s + f.amount, 0);
 const totalPaid = feeBalance.reduce((s, f) => s + f.paid, 0);
 
+const reasonOptions = ['Illness', 'Family Emergency', 'Medical Appointment', 'Other'];
+
 export default function ParentDashboard() {
   const { user } = useAuth();
+  const { getNotificationsForUser, addNotification } = useNotifications();
+  const recipientKey = user ? `parent_${user.id}` : '';
+  const absenceAlerts = getNotificationsForUser(recipientKey).filter(n => n.type === 'absence_alert');
+
+  const [showExcuseDialog, setShowExcuseDialog] = useState(false);
+  const [selectedAlert, setSelectedAlert] = useState(null);
+  const [excuseReason, setExcuseReason] = useState('Illness');
+  const [excuseNote, setExcuseNote] = useState('');
+
+  function handleOpenExcuse(alert) {
+    setSelectedAlert(alert);
+    setExcuseReason('Illness');
+    setExcuseNote('');
+    setShowExcuseDialog(true);
+  }
+
+  function handleSubmitExcuse() {
+    if (!selectedAlert) return;
+    const data = selectedAlert.data;
+
+    // Save excuse request to localStorage
+    const excuses = loadExcuseRequests();
+    const newExcuse = {
+      id: `exc_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      studentId: data.studentId,
+      studentName: data.studentName,
+      date: data.date,
+      section: data.section,
+      subject: data.subject,
+      reason: excuseReason,
+      note: excuseNote,
+      parentUserId: user.id,
+      parentName: `${user.firstName} ${user.lastName}`,
+      status: 'pending',
+      submittedAt: new Date().toISOString(),
+    };
+    excuses.push(newExcuse);
+    saveExcuseRequests(excuses);
+
+    // Notify teachers
+    const teachers = MOCK_USERS.filter(u => u.role === 'teacher');
+    teachers.forEach(teacher => {
+      addNotification({
+        recipientKey: `teacher_${teacher.id}`,
+        type: 'excuse_request',
+        title: `Excuse Request: ${data.studentName}`,
+        message: `${user.firstName} ${user.lastName} submitted an excuse for ${data.studentName}'s absence on ${data.date}. Reason: ${excuseReason}`,
+        data: { excuseId: newExcuse.id, studentId: data.studentId },
+      });
+    });
+
+    setShowExcuseDialog(false);
+    setSelectedAlert(null);
+  }
+
+  function timeAgo(dateStr) {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'Just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    return `${Math.floor(hrs / 24)}d ago`;
+  }
 
   return (
     <div className="space-y-6">
@@ -71,6 +154,38 @@ export default function ParentDashboard() {
         <StatCard label="Fee Balance" value={`₱${(totalFees - totalPaid).toLocaleString()}`} icon={Wallet} color="text-blue-600" bgColor="bg-blue-50" />
         <StatCard label="Behavior" value={`${behaviorLog.length} entries`} icon={AlertTriangle} color="text-purple-600" bgColor="bg-purple-50" />
       </div>
+
+      {/* Absence Alerts */}
+      {absenceAlerts.length > 0 && (
+        <Card className="border-red-200 bg-red-50/30 shadow-sm">
+          <CardHeader className="pb-2">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-red-600" />
+              <CardTitle className="text-sm font-semibold text-red-800">Absence Alerts ({absenceAlerts.length})</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-0 space-y-2">
+            {absenceAlerts.slice(0, 5).map(alert => (
+              <div key={alert.id} className="flex items-center justify-between p-3 rounded-lg bg-white border border-red-100">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-foreground">{alert.title}</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">{alert.message}</p>
+                  <p className="text-[10px] text-muted-foreground/60 mt-1">{timeAgo(alert.createdAt)}</p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleOpenExcuse(alert)}
+                  className="ml-3 gap-1.5 text-xs border-blue-200 text-blue-700 hover:bg-blue-50"
+                >
+                  <FileText className="h-3.5 w-3.5" />
+                  Submit Excuse
+                </Button>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
         {/* Child Grades */}
@@ -184,6 +299,41 @@ export default function ParentDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Excuse Submit Dialog */}
+      <Dialog open={showExcuseDialog} onOpenChange={setShowExcuseDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Submit Excuse</DialogTitle>
+            <DialogDescription>
+              {selectedAlert && `Submitting excuse for ${selectedAlert.data?.studentName}'s absence on ${selectedAlert.data?.date}`}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label className="text-sm font-medium">Reason</Label>
+              <Select value={excuseReason} onChange={(e) => setExcuseReason(e.target.value)} className="mt-1">
+                {reasonOptions.map(r => <option key={r} value={r}>{r}</option>)}
+              </Select>
+            </div>
+            <div>
+              <Label className="text-sm font-medium">Additional Notes (optional)</Label>
+              <Input
+                value={excuseNote}
+                onChange={(e) => setExcuseNote(e.target.value)}
+                placeholder="Any additional details..."
+                className="mt-1"
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setShowExcuseDialog(false)}>Cancel</Button>
+            <Button onClick={handleSubmitExcuse} className="gap-2">
+              <Send className="h-4 w-4" />Submit Excuse
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

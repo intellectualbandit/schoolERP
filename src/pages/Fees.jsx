@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { cn } from '../lib/utils';
 import { useAuth } from '../contexts/AuthContext';
+import { useSchoolConfig } from '../contexts/SchoolConfigContext';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
@@ -39,8 +40,7 @@ const classRoster = [
 
 const feeTypes = ['Tuition', 'Miscellaneous', 'Laboratory', 'Computer Lab', 'Books & Modules', 'ID & Card'];
 
-const sectionGradeMap = { Rizal: 'Grade 7', Bonifacio: 'Grade 8', Mabini: 'Grade 9', Aguinaldo: 'Grade 10' };
-const gradeOptions = ['Grade 7', 'Grade 8', 'Grade 9', 'Grade 10'];
+// sectionGradeMap, gradeOptions from SchoolConfigContext
 
 // Penalty: 2% per month on remaining balance if past due
 const PENALTY_RATE = 0.02;
@@ -154,6 +154,7 @@ function studentName(s) {
 // ──────────────────────────────────────────
 
 export default function Fees() {
+  const { sectionGradeMap, gradeLevels: gradeOptions } = useSchoolConfig();
   const { isReadOnly: checkReadOnly } = useAuth();
   const readOnly = checkReadOnly('fees');
   const [feeRecords, setFeeRecords] = useState(buildInitialFeeRecords);

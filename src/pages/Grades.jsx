@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { cn } from '../lib/utils';
 import { useAuth } from '../contexts/AuthContext';
+import { useSchoolConfig } from '../contexts/SchoolConfigContext';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
@@ -28,13 +29,10 @@ const classRoster = [
   { id: 12, lrn: '136482790012', firstName: 'Teresa', middleName: 'Magbanua', lastName: 'Silang', gradeLevel: 'Grade 10', section: 'Aguinaldo' },
 ];
 
-const subjects = ['Filipino', 'English', 'Mathematics', 'Science', 'Araling Panlipunan', 'ESP', 'MAPEH', 'TLE'];
-const sectionOptions = ['Rizal', 'Bonifacio', 'Mabini', 'Aguinaldo'];
-const sectionGradeMap = { Rizal: 'Grade 7', Bonifacio: 'Grade 8', Mabini: 'Grade 9', Aguinaldo: 'Grade 10' };
-const quarters = ['Q1', 'Q2', 'Q3', 'Q4'];
+// subjects, sectionOptions, sectionGradeMap, quarters from SchoolConfigContext
 
 // Initial grades keyed by `${studentId}-${subject}-${quarter}`
-function buildInitialGrades() {
+function buildInitialGrades(quarters) {
   const g = {};
   const seed = [
     { id: 1, grades: { Filipino: [88,85,90,87], English: [82,80,78,84], Mathematics: [91,89,93,90], Science: [86,84,88,85], 'Araling Panlipunan': [90,88,91,89], ESP: [92,90,93,91], MAPEH: [89,87,90,88], TLE: [85,83,87,84] }},
@@ -104,9 +102,10 @@ function getInitials(s) {
 
 // --- Component ---
 export default function Grades() {
+  const { subjects, sectionNames: sectionOptions, sectionGradeMap, quarters } = useSchoolConfig();
   const { isReadOnly: checkReadOnly } = useAuth();
   const readOnly = checkReadOnly('grades');
-  const [grades, setGrades] = useState(buildInitialGrades);
+  const [grades, setGrades] = useState(() => buildInitialGrades(quarters));
   const [activeQuarter, setActiveQuarter] = useState('Q1');
   const [filterSection, setFilterSection] = useState('Rizal');
   const [filterSubject, setFilterSubject] = useState('');

@@ -18,14 +18,13 @@ import { Label } from '../components/ui/label';
 import { Skeleton } from '../components/ui/skeleton';
 import { cn } from '../lib/utils';
 import { useAuth } from '../contexts/AuthContext';
+import { useSchoolConfig } from '../contexts/SchoolConfigContext';
 
 // ============================================================
 // CONSTANTS
 // ============================================================
 
-const SCHOOL_YEARS = ['2025-2026', '2024-2025', '2023-2024'];
-const GRADE_LEVELS = ['Grade 7', 'Grade 8', 'Grade 9', 'Grade 10'];
-const SECTIONS = { 'Grade 7': 'Rizal', 'Grade 8': 'Bonifacio', 'Grade 9': 'Mabini', 'Grade 10': 'Aguinaldo' };
+// SCHOOL_YEARS, GRADE_LEVELS, SECTIONS from SchoolConfigContext
 
 const REPORT_TYPES = [
   {
@@ -104,7 +103,7 @@ const classRoster = [
   { id: 12, lrn: '136482790012', firstName: 'Teresa',     middleName: 'Magbanua',   lastName: 'Silang',     gender: 'Female', gradeLevel: 'Grade 10', section: 'Aguinaldo', barangay: 'Brgy. Poblacion',    status: 'Active',  dateOfBirth: '2008-12-25' },
 ];
 
-const subjects = ['Filipino', 'English', 'Mathematics', 'Science', 'Araling Panlipunan', 'ESP', 'MAPEH', 'TLE'];
+// subjects from SchoolConfigContext
 
 // Simplified grades for preview (subject -> [Q1,Q2,Q3,Q4])
 const studentGrades = {
@@ -507,6 +506,8 @@ function BarangayPreview() {
 // ============================================================
 
 export default function Reports() {
+  const { gradeLevels: GRADE_LEVELS, gradeSectionMap: SECTIONS, subjects, schoolYear } = useSchoolConfig();
+  const SCHOOL_YEARS = useMemo(() => [schoolYear], [schoolYear]);
   const { isReadOnly: checkReadOnly } = useAuth();
   const readOnly = checkReadOnly('reports');
   const [isLoading, setIsLoading] = useState(true);
