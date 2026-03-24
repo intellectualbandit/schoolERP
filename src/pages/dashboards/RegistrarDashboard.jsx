@@ -66,7 +66,7 @@ export default function RegistrarDashboard() {
                     <span className="font-medium">{s.section}</span>
                     <span className="text-muted-foreground">{s.enrolled}/{s.capacity} ({pct}%)</span>
                   </div>
-                  <div className="h-2.5 rounded-full bg-gray-100 overflow-hidden">
+                  <div className="h-2.5 rounded-full bg-muted overflow-hidden">
                     <div
                       className={`h-full rounded-full transition-all ${Number(pct) > 95 ? 'bg-red-500' : Number(pct) > 85 ? 'bg-amber-500' : 'bg-indigo-500'}`}
                       style={{ width: `${pct}%` }}
@@ -114,7 +114,7 @@ export default function RegistrarDashboard() {
         </CardHeader>
         <CardContent className="pt-0 space-y-2">
           {recentEnrollments.map((e, i) => (
-            <div key={i} className="flex items-center justify-between p-3 rounded-lg border border-gray-100 hover:bg-gray-50">
+            <div key={i} className="flex items-center justify-between p-3 rounded-lg border border-border/60 hover:bg-muted/50">
               <div>
                 <p className="text-sm font-semibold">{e.name}</p>
                 <p className="text-xs text-muted-foreground">{e.grade} · {e.date}</p>

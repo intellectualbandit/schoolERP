@@ -62,7 +62,7 @@ const heatmapColors = {
   late: 'bg-amber-400',
   absent: 'bg-red-400',
   excused: 'bg-blue-400',
-  none: 'bg-gray-100',
+  none: 'bg-muted',
 };
 
 // --- Helpers ---
@@ -338,7 +338,7 @@ export default function Attendance() {
     <div className="space-y-6">
       {/* A. Title Row + View Tabs */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h1 className="text-2xl font-bold text-gray-900">Attendance</h1>
+        <h1 className="text-2xl font-bold text-foreground">Attendance</h1>
         <Tabs value={activeView} onValueChange={setActiveView}>
           <TabsList>
             <TabsTrigger value="daily">Daily Marking</TabsTrigger>
@@ -608,7 +608,7 @@ export default function Attendance() {
               { label: 'Late', color: 'bg-amber-400' },
               { label: 'Absent', color: 'bg-red-400' },
               { label: 'Excused', color: 'bg-blue-400' },
-              { label: 'No Data', color: 'bg-gray-100' },
+              { label: 'No Data', color: 'bg-muted' },
             ].map((item) => (
               <div key={item.label} className="flex items-center gap-1.5">
                 <div className={cn('w-4 h-4 rounded', item.color)} />

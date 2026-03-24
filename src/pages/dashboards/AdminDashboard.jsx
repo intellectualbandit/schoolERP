@@ -171,7 +171,7 @@ export default function AdminDashboard() {
                 <div key={alert.id} className="flex items-center justify-between bg-white rounded-lg px-3 py-2.5 border border-amber-100">
                   <div className="flex items-center gap-2 min-w-0">
                     <span className={`h-2 w-2 rounded-full flex-shrink-0 ${alert.severity === 'high' ? 'bg-red-500' : 'bg-amber-500'}`} />
-                    <span className="text-xs text-gray-700 truncate">{alert.title}</span>
+                    <span className="text-xs text-foreground/90 truncate">{alert.title}</span>
                   </div>
                   <Button variant="ghost" size="sm" className="text-xs h-6 px-2 text-amber-700 hover:text-amber-900 hover:bg-amber-100 flex-shrink-0 ml-2">
                     {alert.action}
@@ -239,7 +239,7 @@ export default function AdminDashboard() {
                       <div key={g.name} className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: g.fill }} />
-                          <span className="text-xs text-gray-600">{g.name}</span>
+                          <span className="text-xs text-muted-foreground">{g.name}</span>
                         </div>
                         <div className="text-right">
                           <span className="text-xs font-semibold">{g.value}</span>
@@ -257,10 +257,10 @@ export default function AdminDashboard() {
                   {gradeLevelData.map(g => (
                     <div key={g.name} className="space-y-1">
                       <div className="flex items-center justify-between text-xs">
-                        <span className="text-gray-600">{g.name}</span>
+                        <span className="text-muted-foreground">{g.name}</span>
                         <span className="font-semibold">{g.value}</span>
                       </div>
-                      <div className="h-2 rounded-full bg-gray-100 overflow-hidden">
+                      <div className="h-2 rounded-full bg-muted overflow-hidden">
                         <div className="h-full rounded-full transition-all" style={{ width: `${(g.value / 325) * 100}%`, backgroundColor: g.fill }} />
                       </div>
                     </div>
@@ -346,12 +346,12 @@ export default function AdminDashboard() {
                 <Bar dataKey="outstanding" fill="#e2e8f0" name="Outstanding" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
-            <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+            <div className="mt-3 p-3 bg-muted rounded-lg">
               <div className="flex items-center justify-between mb-1.5">
-                <span className="text-xs font-medium text-gray-600">Collection Rate</span>
+                <span className="text-xs font-medium text-muted-foreground">Collection Rate</span>
                 <span className="text-xs font-bold text-indigo-600">{collectionRate}%</span>
               </div>
-              <div className="h-2.5 rounded-full bg-gray-200 overflow-hidden">
+              <div className="h-2.5 rounded-full bg-muted overflow-hidden">
                 <div className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-indigo-400 transition-all" style={{ width: `${collectionRate}%` }} />
               </div>
             </div>
@@ -389,7 +389,7 @@ export default function AdminDashboard() {
                   {gradeDistribution.map((g) => {
                     const total = g.outstanding + g.satisfactory + g.didNotMeet;
                     return (
-                      <tr key={g.grade} className="border-b last:border-0 hover:bg-gray-50/50 transition-colors">
+                      <tr key={g.grade} className="border-b last:border-0 hover:bg-muted/40 transition-colors">
                         <td className="py-3 pr-4"><span className="font-medium text-sm">{g.grade}</span></td>
                         <td className="py-3 px-3 text-center">
                           <span className="inline-flex items-center justify-center h-7 w-12 rounded-md bg-emerald-50 text-emerald-700 text-xs font-semibold">{((g.outstanding / total) * 100).toFixed(0)}%</span>
@@ -403,7 +403,7 @@ export default function AdminDashboard() {
                         <td className="py-3 pl-3 text-center"><span className="text-sm font-bold">{g.average}</span></td>
                         <td className="py-3 pl-3">
                           <div className="flex justify-end">
-                            <div className="w-24 h-2 rounded-full bg-gray-100 overflow-hidden flex">
+                            <div className="w-24 h-2 rounded-full bg-muted overflow-hidden flex">
                               <div className="h-full bg-emerald-500" style={{ width: `${(g.outstanding / total) * 100}%` }} />
                               <div className="h-full bg-blue-500" style={{ width: `${(g.satisfactory / total) * 100}%` }} />
                               <div className="h-full bg-red-500" style={{ width: `${(g.didNotMeet / total) * 100}%` }} />
@@ -432,8 +432,8 @@ export default function AdminDashboard() {
           <CardContent className="pt-0">
             <div className="space-y-3">
               {topSections.map((s, i) => (
-                <div key={s.section} className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-gray-50 transition-colors">
-                  <div className={`h-8 w-8 rounded-lg flex items-center justify-center text-xs font-bold ${i === 0 ? 'bg-amber-100 text-amber-700' : i === 1 ? 'bg-gray-100 text-gray-600' : i === 2 ? 'bg-orange-50 text-orange-600' : 'bg-gray-50 text-gray-500'}`}>
+                <div key={s.section} className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted/50 transition-colors">
+                  <div className={`h-8 w-8 rounded-lg flex items-center justify-center text-xs font-bold ${i === 0 ? 'bg-amber-100 text-amber-700' : i === 1 ? 'bg-muted text-muted-foreground' : i === 2 ? 'bg-orange-50 text-orange-600' : 'bg-muted text-muted-foreground'}`}>
                     #{i + 1}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -489,12 +489,12 @@ export default function AdminDashboard() {
               {recentActivity.map((item) => {
                 const Icon = item.icon;
                 return (
-                  <div key={item.id} className="flex items-start gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors">
+                  <div key={item.id} className="flex items-start gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors">
                     <div className={`h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0 ${item.color}`}>
                       <Icon className="h-3.5 w-3.5" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs text-gray-700 leading-relaxed">{item.message}</p>
+                      <p className="text-xs text-foreground/90 leading-relaxed">{item.message}</p>
                       <p className="text-[11px] text-muted-foreground mt-0.5">{item.time}</p>
                     </div>
                   </div>
@@ -537,11 +537,11 @@ export default function AdminDashboard() {
             </div>
             <Separator className="my-4" />
             <div className="grid grid-cols-2 gap-3">
-              <div className="text-center p-2.5 bg-gray-50 rounded-lg">
+              <div className="text-center p-2.5 bg-muted rounded-lg">
                 <p className="text-lg font-bold text-indigo-600">98.4%</p>
                 <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Retention Rate</p>
               </div>
-              <div className="text-center p-2.5 bg-gray-50 rounded-lg">
+              <div className="text-center p-2.5 bg-muted rounded-lg">
                 <p className="text-lg font-bold text-emerald-600">4.2</p>
                 <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Parent Rating</p>
               </div>

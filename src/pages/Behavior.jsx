@@ -1017,7 +1017,7 @@ export default function Behavior() {
                           </span>
                         )}
                       </h3>
-                      <p className="text-sm text-gray-500">{viewStudent.gradeLevel} - {viewStudent.section}</p>
+                      <p className="text-sm text-muted-foreground">{viewStudent.gradeLevel} - {viewStudent.section}</p>
                     </div>
                   </div>
 

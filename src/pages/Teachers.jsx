@@ -396,7 +396,7 @@ export default function Teachers() {
     <div>
       {/* A. Title Row */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
-        <h2 className="text-xl font-semibold text-gray-800">Teachers</h2>
+        <h2 className="text-xl font-semibold text-foreground">Teachers</h2>
         <div className="flex flex-wrap gap-2">
           {/* View toggle */}
           <div className="inline-flex rounded-lg border overflow-hidden">
@@ -561,7 +561,7 @@ export default function Teachers() {
                         </AvatarFallback>
                       </Avatar>
                       <div className="min-w-0 flex-1">
-                        <h3 className="text-sm font-semibold text-gray-800 truncate">{t.fullName}</h3>
+                        <h3 className="text-sm font-semibold text-foreground truncate">{t.fullName}</h3>
                         <Badge variant={getStatusBadgeVariant(t.status)} className="mt-0.5">
                           {t.status}
                         </Badge>
@@ -571,11 +571,11 @@ export default function Teachers() {
                     <div className="space-y-2 mb-4 text-sm">
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Specialization</span>
-                        <span className="text-gray-800 font-medium text-right truncate ml-2">{t.specialization}</span>
+                        <span className="text-foreground font-medium text-right truncate ml-2">{t.specialization}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Department</span>
-                        <span className="text-gray-800 font-medium">{t.department}</span>
+                        <span className="text-foreground font-medium">{t.department}</span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-muted-foreground">Type</span>
@@ -668,7 +668,7 @@ export default function Teachers() {
                             {getInitials(t)}
                           </AvatarFallback>
                         </Avatar>
-                        <span className="text-sm font-medium text-gray-800">{t.fullName}</span>
+                        <span className="text-sm font-medium text-foreground">{t.fullName}</span>
                       </div>
                     </TableCell>
                     <TableCell className="text-muted-foreground">{t.specialization}</TableCell>
@@ -878,7 +878,7 @@ export default function Teachers() {
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-800">
+                    <h3 className="text-lg font-semibold text-foreground">
                       {viewTeacher.fullName}
                     </h3>
                     <p className="text-sm text-muted-foreground">ID: {viewTeacher.employeeId}</p>
@@ -925,7 +925,7 @@ export default function Teachers() {
                     ].map(([label, value]) => (
                       <div key={label} className="flex justify-between items-start">
                         <span className="text-sm text-muted-foreground">{label}</span>
-                        <span className="text-sm font-medium text-gray-800 text-right">{value}</span>
+                        <span className="text-sm font-medium text-foreground text-right">{value}</span>
                       </div>
                     ))}
                   </div>
@@ -973,7 +973,7 @@ export default function Teachers() {
                       <TableBody>
                         {viewTeacher.schedule.map((s, i) => (
                           <TableRow key={i}>
-                            <TableCell className="text-gray-700">{s.day}</TableCell>
+                            <TableCell className="text-foreground/90">{s.day}</TableCell>
                             <TableCell className="text-muted-foreground">{s.time}</TableCell>
                             <TableCell className="text-muted-foreground">{s.subject}</TableCell>
                             <TableCell className="text-muted-foreground">{s.section}</TableCell>

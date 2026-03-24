@@ -97,7 +97,7 @@ export default function CashierDashboard() {
                   <div key={p.name} className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: p.fill }} />
-                      <span className="text-xs text-gray-600">{p.name}</span>
+                      <span className="text-xs text-muted-foreground">{p.name}</span>
                     </div>
                     <span className="text-xs font-semibold">{p.value}%</span>
                   </div>
@@ -127,12 +127,12 @@ export default function CashierDashboard() {
               </thead>
               <tbody>
                 {overdueAccounts.map((a, i) => (
-                  <tr key={i} className="border-b last:border-0 hover:bg-gray-50/50">
+                  <tr key={i} className="border-b last:border-0 hover:bg-muted/50">
                     <td className="py-2.5 font-medium">{a.name}</td>
                     <td className="py-2.5 text-muted-foreground text-xs">{a.grade}</td>
                     <td className="py-2.5 text-right font-semibold text-red-600">₱{a.balance.toLocaleString()}</td>
                     <td className="py-2.5 text-center">
-                      <Badge className={`text-xs ${a.months >= 3 ? 'bg-red-100 text-red-700' : a.months >= 2 ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-700'}`}>
+                      <Badge className={`text-xs ${a.months >= 3 ? 'bg-red-100 text-red-700' : a.months >= 2 ? 'bg-amber-100 text-amber-700' : 'bg-muted text-foreground/90'}`}>
                         {a.months} mo
                       </Badge>
                     </td>

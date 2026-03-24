@@ -496,7 +496,7 @@ export default function Students() {
     <div>
       {/* A. Title Row */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
-        <h2 className="text-xl font-semibold text-gray-800">Students</h2>
+        <h2 className="text-xl font-semibold text-foreground">Students</h2>
         <div className="flex gap-2">
           <Button
             variant="outline"
@@ -922,10 +922,10 @@ export default function Students() {
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-800">
+                    <h3 className="text-lg font-semibold text-foreground">
                       {viewStudent.firstName} {viewStudent.lastName}
                     </h3>
-                    <p className="text-sm text-gray-500">LRN: {viewStudent.lrn}</p>
+                    <p className="text-sm text-muted-foreground">LRN: {viewStudent.lrn}</p>
                   </div>
                 </div>
               </div>
@@ -1033,10 +1033,10 @@ export default function Students() {
                               <p className="text-xl font-bold text-amber-700">{a.late}</p>
                             </CardContent>
                           </Card>
-                          <Card className="bg-gray-50 border-gray-100">
+                          <Card className="bg-muted border-border/60">
                             <CardContent className="p-3 text-center">
-                              <p className="text-xs text-gray-500 font-medium">Total Days</p>
-                              <p className="text-xl font-bold text-gray-700">{a.total}</p>
+                              <p className="text-xs text-muted-foreground font-medium">Total Days</p>
+                              <p className="text-xl font-bold text-foreground/90">{a.total}</p>
                             </CardContent>
                           </Card>
                         </div>

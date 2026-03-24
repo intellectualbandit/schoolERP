@@ -71,7 +71,7 @@ export default function CounselorDashboard() {
                   <Badge className={`text-xs ${s.risk === 'High' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>{s.risk}</Badge>
                 </div>
                 <p className="text-xs text-muted-foreground">{s.section}</p>
-                <p className="text-xs text-gray-600 mt-1">{s.reason}</p>
+                <p className="text-xs text-muted-foreground mt-1">{s.reason}</p>
               </div>
             ))}
           </CardContent>
@@ -97,7 +97,7 @@ export default function CounselorDashboard() {
                   <div key={m.name} className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: m.fill }} />
-                      <span className="text-xs text-gray-600">{m.name}</span>
+                      <span className="text-xs text-muted-foreground">{m.name}</span>
                     </div>
                     <span className="text-xs font-semibold">{m.value}%</span>
                   </div>
@@ -144,7 +144,7 @@ export default function CounselorDashboard() {
                     {s.score}/100
                   </span>
                 </div>
-                <div className="h-2.5 rounded-full bg-gray-100 overflow-hidden">
+                <div className="h-2.5 rounded-full bg-muted overflow-hidden">
                   <div
                     className={`h-full rounded-full transition-all ${s.score >= 80 ? 'bg-emerald-500' : s.score >= 70 ? 'bg-amber-500' : 'bg-red-500'}`}
                     style={{ width: `${s.score}%` }}

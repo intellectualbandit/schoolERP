@@ -59,7 +59,7 @@ export default function TeacherDashboard() {
           </CardHeader>
           <CardContent className="pt-0 space-y-2">
             {todaySchedule.map((cls, i) => (
-              <div key={i} className={`flex items-center gap-3 p-3 rounded-lg border ${cls.status === 'current' ? 'border-indigo-200 bg-indigo-50/50' : cls.status === 'done' ? 'border-gray-100 bg-gray-50/50 opacity-60' : 'border-gray-100'}`}>
+              <div key={i} className={`flex items-center gap-3 p-3 rounded-lg border ${cls.status === 'current' ? 'border-indigo-200 bg-indigo-50/50' : cls.status === 'done' ? 'border-border/60 bg-gray-50/50 opacity-60' : 'border-border/60'}`}>
                 <div className="text-center min-w-[70px]">
                   <p className="text-xs font-semibold">{cls.time}</p>
                 </div>
@@ -82,7 +82,7 @@ export default function TeacherDashboard() {
           </CardHeader>
           <CardContent className="pt-0 space-y-3">
             {mySections.map(sec => (
-              <div key={sec.section} className="p-3 rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors">
+              <div key={sec.section} className="p-3 rounded-lg border border-border/60 hover:bg-muted/50 transition-colors">
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-sm font-semibold">{sec.section}</p>
                   <Badge variant="outline" className="text-xs">{sec.students} students</Badge>

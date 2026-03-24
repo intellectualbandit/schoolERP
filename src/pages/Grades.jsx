@@ -91,7 +91,7 @@ function gradeColor(val) {
 }
 
 function gradeColorBadge(val) {
-  if (val == null) return 'bg-gray-100 text-gray-400';
+  if (val == null) return 'bg-muted text-gray-400';
   if (val >= 90) return 'bg-green-100 text-green-700';
   if (val >= 75) return 'bg-blue-100 text-blue-700';
   if (val >= 60) return 'bg-amber-100 text-amber-700';

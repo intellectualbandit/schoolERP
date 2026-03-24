@@ -108,7 +108,7 @@ export default function StudentDashboard() {
             </CardHeader>
             <CardContent className="pt-0 space-y-1.5">
               {schedule.map((s, i) => (
-                <div key={i} className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50">
+                <div key={i} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50">
                   <div className="text-[11px] font-medium text-muted-foreground min-w-[75px]">{s.time}</div>
                   <div>
                     <p className="text-xs font-semibold">{s.subject}</p>
@@ -128,7 +128,7 @@ export default function StudentDashboard() {
             </CardHeader>
             <CardContent className="pt-0 space-y-2">
               {announcements.map(a => (
-                <div key={a.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50">
+                <div key={a.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50">
                   <div className="flex-1">
                     <p className="text-xs font-semibold">{a.title}</p>
                     <p className="text-[11px] text-muted-foreground">{a.date}</p>
@@ -147,7 +147,7 @@ export default function StudentDashboard() {
               </div>
               <div className="flex gap-2">
                 {['😊', '😐', '😢', '😰', '😠'].map(emoji => (
-                  <button key={emoji} className="h-10 w-10 rounded-lg hover:bg-gray-100 text-lg transition-colors">
+                  <button key={emoji} className="h-10 w-10 rounded-lg hover:bg-muted text-lg transition-colors">
                     {emoji}
                   </button>
                 ))}

@@ -1,4 +1,4 @@
-import { Menu, Bell, LogOut, User } from 'lucide-react';
+import { Menu, Bell, LogOut, ChevronRight } from 'lucide-react';
 import { Button } from './ui/button';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { Badge } from './ui/badge';
@@ -33,32 +33,35 @@ export default function Header({ active, setIsOpen }) {
     : 'U';
 
   return (
-    <header className="bg-background border-b px-4 py-3 flex items-center gap-3 sticky top-0 z-10">
+    <header className="bg-background/80 backdrop-blur-md border-b px-4 lg:px-6 py-2.5 flex items-center gap-3 sticky top-0 z-10">
       {/* Hamburger - mobile only */}
       <Button
         variant="ghost"
         size="icon"
         onClick={() => setIsOpen(prev => !prev)}
-        className="md:hidden h-8 w-8"
+        className="md:hidden h-8 w-8 text-muted-foreground"
       >
         <Menu className="h-5 w-5" />
       </Button>
 
       {/* Page title */}
-      <h2 className="text-base font-semibold text-foreground flex-1">
-        {labels[active] || 'Dashboard'}
-      </h2>
+      <div className="flex items-center gap-1.5 flex-1 min-w-0">
+        <h2 className="text-sm font-semibold text-foreground truncate">
+          {labels[active] || 'Dashboard'}
+        </h2>
+      </div>
 
       {/* Right side */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1.5">
         {roleConfig && (
-          <Badge variant="outline" className={`text-xs px-2 py-0.5 hidden sm:inline-flex ${roleConfig.color}`}>
+          <Badge variant="outline" className={`text-[11px] px-2 py-0.5 hidden sm:inline-flex font-medium ${roleConfig.color}`}>
             {roleConfig.shortLabel}
           </Badge>
         )}
 
-        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
+        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground relative">
           <Bell className="h-4 w-4" />
+          <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-primary ring-2 ring-background" />
         </Button>
 
         <DropdownMenu>
@@ -71,15 +74,15 @@ export default function Header({ active, setIsOpen }) {
               </Avatar>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
+          <DropdownMenuContent align="end" className="w-52">
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium">{user ? `${user.firstName} ${user.lastName}` : 'User'}</p>
+                <p className="text-sm font-semibold">{user ? `${user.firstName} ${user.lastName}` : 'User'}</p>
                 <p className="text-xs text-muted-foreground">{user?.email}</p>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={logout} className="text-red-600 cursor-pointer">
+            <DropdownMenuItem onClick={logout} className="text-red-600 cursor-pointer focus:text-red-600 focus:bg-red-50">
               <LogOut className="h-4 w-4 mr-2" />
               Sign out
             </DropdownMenuItem>

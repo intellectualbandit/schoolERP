@@ -111,7 +111,7 @@ export default function ParentDashboard() {
             </CardHeader>
             <CardContent className="pt-0 space-y-2">
               {feeBalance.map(f => (
-                <div key={f.type} className="flex items-center justify-between p-2.5 rounded-lg bg-gray-50">
+                <div key={f.type} className="flex items-center justify-between p-2.5 rounded-lg bg-muted">
                   <div>
                     <p className="text-xs font-semibold">{f.type}</p>
                     <p className="text-[11px] text-muted-foreground">₱{f.amount.toLocaleString()}</p>
@@ -156,12 +156,12 @@ export default function ParentDashboard() {
           </CardHeader>
           <CardContent className="pt-0 space-y-2">
             {behaviorLog.map((b, i) => (
-              <div key={i} className={`p-3 rounded-lg border ${b.type === 'Positive' ? 'border-emerald-100 bg-emerald-50/30' : 'border-gray-100'}`}>
+              <div key={i} className={`p-3 rounded-lg border ${b.type === 'Positive' ? 'border-emerald-100 bg-emerald-50/30' : 'border-border/60'}`}>
                 <div className="flex items-center justify-between mb-1">
-                  <Badge className={`text-xs ${b.type === 'Positive' ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-700'}`}>{b.category}</Badge>
+                  <Badge className={`text-xs ${b.type === 'Positive' ? 'bg-emerald-100 text-emerald-700' : 'bg-muted text-foreground/90'}`}>{b.category}</Badge>
                   <span className="text-[11px] text-muted-foreground">{b.date}</span>
                 </div>
-                <p className="text-xs text-gray-700">{b.note}</p>
+                <p className="text-xs text-foreground/90">{b.note}</p>
               </div>
             ))}
           </CardContent>
@@ -176,7 +176,7 @@ export default function ParentDashboard() {
           </CardHeader>
           <CardContent className="pt-0 space-y-2">
             {announcements.map(a => (
-              <div key={a.id} className="p-3 rounded-lg hover:bg-gray-50 border border-gray-100">
+              <div key={a.id} className="p-3 rounded-lg hover:bg-muted/50 border border-border/60">
                 <p className="text-xs font-semibold">{a.title}</p>
                 <p className="text-[11px] text-muted-foreground mt-0.5">{a.date}</p>
               </div>
