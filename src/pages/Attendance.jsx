@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { cn } from '../lib/utils';
+import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
@@ -98,6 +99,8 @@ function currentMonthStr() {
 
 // --- Component ---
 export default function Attendance() {
+  const { isReadOnly: checkReadOnly } = useAuth();
+  const readOnly = checkReadOnly('attendance');
   const [attendanceHistory, setAttendanceHistory] = useState(initialAttendanceHistory);
   const [isLoading, setIsLoading] = useState(true);
   const [toast, setToast] = useState(null);
@@ -559,15 +562,17 @@ export default function Attendance() {
                   <RotateCcw className="h-4 w-4" />
                   Reset
                 </Button>
-                <Button
-                  size="sm"
-                  onClick={() => setShowSaveConfirm(true)}
-                  disabled={!hasUnsavedChanges}
-                  className="gap-2"
-                >
-                  <Save className="h-4 w-4" />
-                  Save Attendance
-                </Button>
+                {!readOnly && (
+                  <Button
+                    size="sm"
+                    onClick={() => setShowSaveConfirm(true)}
+                    disabled={!hasUnsavedChanges}
+                    className="gap-2"
+                  >
+                    <Save className="h-4 w-4" />
+                    Save Attendance
+                  </Button>
+                )}
               </div>
             </CardContent>
           </Card>

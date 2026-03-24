@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 import {
   Heart, AlertTriangle, TrendingUp, MessageSquare,
   Search, ChevronDown, ChevronRight, Clock,
@@ -182,6 +183,8 @@ const getInitials = (name) =>
 // ============================================================
 
 export default function Wellness() {
+  const { isReadOnly: checkReadOnly } = useAuth();
+  const readOnly = checkReadOnly('wellness');
   const [selectedSection, setSelectedSection] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStudent, setSelectedStudent] = useState(null);
@@ -603,30 +606,32 @@ export default function Wellness() {
                               </div>
                             ))}
 
-                            <div className="flex gap-2">
-                              <Input
-                                placeholder="Add intervention note..."
-                                value={selectedStudent?.id === student.id ? newNoteText : ''}
-                                onChange={(e) => {
-                                  setSelectedStudent(student);
-                                  setNewNoteText(e.target.value);
-                                }}
-                                className="text-sm"
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter' && !e.shiftKey) {
-                                    e.preventDefault();
-                                    handleAddNote(student.id);
-                                  }
-                                }}
-                              />
-                              <Button
-                                size="sm"
-                                onClick={() => handleAddNote(student.id)}
-                                disabled={!newNoteText.trim() || selectedStudent?.id !== student.id}
-                              >
-                                <Send className="h-4 w-4" />
-                              </Button>
-                            </div>
+                            {!readOnly && (
+                              <div className="flex gap-2">
+                                <Input
+                                  placeholder="Add intervention note..."
+                                  value={selectedStudent?.id === student.id ? newNoteText : ''}
+                                  onChange={(e) => {
+                                    setSelectedStudent(student);
+                                    setNewNoteText(e.target.value);
+                                  }}
+                                  className="text-sm"
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && !e.shiftKey) {
+                                      e.preventDefault();
+                                      handleAddNote(student.id);
+                                    }
+                                  }}
+                                />
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleAddNote(student.id)}
+                                  disabled={!newNoteText.trim() || selectedStudent?.id !== student.id}
+                                >
+                                  <Send className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            )}
                           </div>
                         )}
                       </CardContent>

@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Search, Download, Plus, Eye, Trash2, LayoutGrid, List, AlertTriangle, BookOpen, CalendarDays, Users } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
@@ -213,6 +214,8 @@ function exportToCSV(list) {
 
 // --- Component ---
 export default function Teachers() {
+  const { isReadOnly: checkReadOnly } = useAuth();
+  const readOnly = checkReadOnly('teachers');
   const [teachers, setTeachers] = useState(initialTeachers);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -420,11 +423,12 @@ export default function Teachers() {
             <Download className="h-4 w-4 mr-2" />
             Export CSV
           </Button>
-          {/* TODO: Role check — only Admin and HR should see Add Teacher */}
-          <Button size="sm" onClick={() => setShowAddModal(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Teacher
-          </Button>
+          {!readOnly && (
+            <Button size="sm" onClick={() => setShowAddModal(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Teacher
+            </Button>
+          )}
         </div>
       </div>
 
@@ -596,16 +600,17 @@ export default function Teachers() {
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
-                        {/* TODO: Role check — only Admin and HR should see delete */}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-red-500 hover:text-red-700"
-                          onClick={() => handleDeleteTeacher(t.id)}
-                          title="Delete teacher"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        {!readOnly && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-red-500 hover:text-red-700"
+                            onClick={() => handleDeleteTeacher(t.id)}
+                            title="Delete teacher"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </CardContent>
@@ -689,16 +694,17 @@ export default function Teachers() {
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
-                        {/* TODO: Role check — only Admin and HR should see delete */}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-red-500 hover:text-red-700"
-                          onClick={() => handleDeleteTeacher(t.id)}
-                          title="Delete teacher"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        {!readOnly && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-red-500 hover:text-red-700"
+                            onClick={() => handleDeleteTeacher(t.id)}
+                            title="Delete teacher"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>

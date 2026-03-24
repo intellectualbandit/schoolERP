@@ -17,12 +17,13 @@ import { cn } from '../lib/utils';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { Button } from './ui/button';
 import { Separator } from './ui/separator';
+import { useAuth } from '../contexts/AuthContext';
+import ROLE_CONFIG from '../data/roleConfig';
 
-const menuItems = [
+const allMenuItems = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { id: 'students', label: 'Students', icon: Users },
   { id: 'teachers', label: 'Teachers', icon: GraduationCap },
-  { id: 'classes', label: 'Classes', icon: School },
   { id: 'attendance', label: 'Attendance', icon: ClipboardCheck },
   { id: 'grades', label: 'Grades', icon: Star },
   { id: 'fees', label: 'Fees', icon: Wallet },
@@ -34,6 +35,16 @@ const menuItems = [
 ];
 
 export default function Sidebar({ active, setActive, isOpen, setIsOpen }) {
+  const { user, logout } = useAuth();
+  const roleConfig = user ? ROLE_CONFIG[user.role] : null;
+  const allowedPages = roleConfig?.allowedPages || [];
+
+  const menuItems = allMenuItems.filter(item => allowedPages.includes(item.id));
+
+  const initials = user
+    ? `${user.firstName?.[0] || ''}${user.lastName?.[0] || ''}`.toUpperCase()
+    : 'U';
+
   return (
     <>
       {/* Overlay for mobile */}
@@ -92,13 +103,26 @@ export default function Sidebar({ active, setActive, isOpen, setIsOpen }) {
           <div className="flex items-center gap-3">
             <Avatar className="h-8 w-8">
               <AvatarFallback className="bg-sidebar-accent text-sidebar-accent-foreground text-xs font-bold">
-                AD
+                {initials}
               </AvatarFallback>
             </Avatar>
-            <div className="min-w-0">
-              <p className="text-sidebar-foreground text-xs font-semibold truncate">Admin User</p>
-              <p className="text-sidebar-foreground/50 text-xs truncate">Administrator</p>
+            <div className="min-w-0 flex-1">
+              <p className="text-sidebar-foreground text-xs font-semibold truncate">
+                {user ? `${user.firstName} ${user.lastName}` : 'User'}
+              </p>
+              <p className="text-sidebar-foreground/50 text-xs truncate">
+                {roleConfig?.label || 'Unknown Role'}
+              </p>
             </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={logout}
+              className="h-7 w-7 text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 flex-shrink-0"
+              title="Sign out"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+            </Button>
           </div>
         </div>
       </aside>

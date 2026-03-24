@@ -16,6 +16,7 @@ import { Separator } from '../components/ui/separator';
 import { Avatar, AvatarFallback } from '../components/ui/avatar';
 import { Skeleton } from '../components/ui/skeleton';
 import { cn } from '../lib/utils';
+import { useAuth } from '../contexts/AuthContext';
 
 // --- Sample Alumni Data ---
 const initialAlumni = [
@@ -244,6 +245,8 @@ const feedTypeConfig = {
 };
 
 export default function Alumni() {
+  const { isReadOnly: checkReadOnly } = useAuth();
+  const readOnly = checkReadOnly('alumni');
   const [alumni, setAlumni] = useState(initialAlumni);
   const [search, setSearch] = useState('');
   const [filterYear, setFilterYear] = useState('');
@@ -434,9 +437,11 @@ export default function Alumni() {
                 <option value="In College">In College</option>
                 <option value="Employed">Employed</option>
               </Select>
-              <Button size="sm" onClick={openAdd}>
-                <Plus className="h-4 w-4 mr-1" /> Add Alumni
-              </Button>
+              {!readOnly && (
+                <Button size="sm" onClick={openAdd}>
+                  <Plus className="h-4 w-4 mr-1" /> Add Alumni
+                </Button>
+              )}
             </div>
           </div>
         </CardHeader>
@@ -499,12 +504,16 @@ export default function Alumni() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
-                          <Button variant="ghost" size="sm" onClick={() => openEdit(a)} className="h-8 w-8 p-0">
-                            <Edit2 className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button variant="ghost" size="sm" onClick={() => handleDelete(a.id)} className="h-8 w-8 p-0 text-red-500 hover:text-red-700">
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
+                          {!readOnly && (
+                            <>
+                              <Button variant="ghost" size="sm" onClick={() => openEdit(a)} className="h-8 w-8 p-0">
+                                <Edit2 className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button variant="ghost" size="sm" onClick={() => handleDelete(a.id)} className="h-8 w-8 p-0 text-red-500 hover:text-red-700">
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>

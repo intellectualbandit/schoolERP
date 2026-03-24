@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { cn } from '../lib/utils';
+import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
@@ -103,6 +104,8 @@ function getInitials(s) {
 
 // --- Component ---
 export default function Grades() {
+  const { isReadOnly: checkReadOnly } = useAuth();
+  const readOnly = checkReadOnly('grades');
   const [grades, setGrades] = useState(buildInitialGrades);
   const [activeQuarter, setActiveQuarter] = useState('Q1');
   const [filterSection, setFilterSection] = useState('Rizal');
@@ -113,7 +116,7 @@ export default function Grades() {
   const [showReleaseConfirm, setShowReleaseConfirm] = useState(false);
   const [releasedQuarters, setReleasedQuarters] = useState({});
   const [toast, setToast] = useState(null);
-  const [isAdmin] = useState(true);
+  const isAdmin = !readOnly;
   const [isLoading, setIsLoading] = useState(true);
   const [showTransmutation, setShowTransmutation] = useState(false);
 

@@ -17,6 +17,7 @@ import { Avatar, AvatarFallback } from '../components/ui/avatar';
 import { Progress } from '../components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { cn } from '../lib/utils';
+import { useAuth } from '../contexts/AuthContext';
 
 // ============================================================
 // SAMPLE DATA
@@ -178,6 +179,8 @@ const emptyForm = {
 // ============================================================
 
 export default function Announcements() {
+  const { isReadOnly: checkReadOnly } = useAuth();
+  const readOnly = checkReadOnly('announcements');
   const [announcements, setAnnouncements] = useState(initialAnnouncements);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterAudience, setFilterAudience] = useState('All');
@@ -340,10 +343,12 @@ export default function Announcements() {
             {stats.total} announcements &middot; {stats.pinned} pinned &middot; {Math.round((stats.totalReads / stats.totalPossible) * 100)}% avg. read rate
           </p>
         </div>
-        <Button onClick={openCreate} className="gap-2 shrink-0">
-          <Plus className="h-4 w-4" />
-          Post Announcement
-        </Button>
+        {!readOnly && (
+          <Button onClick={openCreate} className="gap-2 shrink-0">
+            <Plus className="h-4 w-4" />
+            Post Announcement
+          </Button>
+        )}
       </div>
 
       {/* ---- Filters ---- */}
@@ -447,36 +452,37 @@ export default function Announcements() {
                       </div>
                     </div>
 
-                    {/* Admin actions */}
-                    <div className="flex items-center gap-1 shrink-0">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                        onClick={() => togglePin(a.id)}
-                        title={a.pinned ? 'Unpin' : 'Pin'}
-                      >
-                        {a.pinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                        onClick={() => openEdit(a)}
-                        title="Edit"
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                        onClick={() => setDeleteDialog({ open: true, id: a.id })}
-                        title="Delete"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    {!readOnly && (
+                      <div className="flex items-center gap-1 shrink-0">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                          onClick={() => togglePin(a.id)}
+                          title={a.pinned ? 'Unpin' : 'Pin'}
+                        >
+                          {a.pinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                          onClick={() => openEdit(a)}
+                          title="Edit"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                          onClick={() => setDeleteDialog({ open: true, id: a.id })}
+                          title="Delete"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
                   </div>
 
                   {/* Title */}

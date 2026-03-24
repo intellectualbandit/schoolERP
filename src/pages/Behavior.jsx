@@ -20,6 +20,7 @@ import { Label } from '../components/ui/label';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../components/ui/tooltip';
 import { Skeleton } from '../components/ui/skeleton';
 import { cn } from '../lib/utils';
+import { useAuth } from '../contexts/AuthContext';
 
 // ============================================================
 // CONSTANTS
@@ -153,6 +154,8 @@ const defaultFormState = {
 // ============================================================
 
 export default function Behavior() {
+  const { isReadOnly: checkReadOnly } = useAuth();
+  const readOnly = checkReadOnly('behavior');
   const [incidents, setIncidents] = useState(initialIncidents);
   const [isLoading, setIsLoading] = useState(true);
   const [showLogModal, setShowLogModal] = useState(false);
@@ -444,14 +447,18 @@ export default function Behavior() {
           />
         </div>
         <div className="flex gap-2 flex-wrap">
-          <Button onClick={() => handleOpenLogModal('Positive')} variant="outline" size="sm" className="gap-1.5 border-emerald-200 text-emerald-700 hover:bg-emerald-50">
-            <Award className="h-4 w-4" />
-            Commend
-          </Button>
-          <Button onClick={() => handleOpenLogModal()} size="sm" className="gap-1.5">
-            <Plus className="h-4 w-4" />
-            Log Incident
-          </Button>
+          {!readOnly && (
+            <>
+              <Button onClick={() => handleOpenLogModal('Positive')} variant="outline" size="sm" className="gap-1.5 border-emerald-200 text-emerald-700 hover:bg-emerald-50">
+                <Award className="h-4 w-4" />
+                Commend
+              </Button>
+              <Button onClick={() => handleOpenLogModal()} size="sm" className="gap-1.5">
+                <Plus className="h-4 w-4" />
+                Log Incident
+              </Button>
+            </>
+          )}
         </div>
       </div>
 

@@ -17,6 +17,7 @@ import { Separator } from '../components/ui/separator';
 import { Label } from '../components/ui/label';
 import { Skeleton } from '../components/ui/skeleton';
 import { cn } from '../lib/utils';
+import { useAuth } from '../contexts/AuthContext';
 
 // ============================================================
 // CONSTANTS
@@ -506,6 +507,8 @@ function BarangayPreview() {
 // ============================================================
 
 export default function Reports() {
+  const { isReadOnly: checkReadOnly } = useAuth();
+  const readOnly = checkReadOnly('reports');
   const [isLoading, setIsLoading] = useState(true);
   const [history, setHistory] = useState(initialHistory);
   const [selectedReport, setSelectedReport] = useState(null);

@@ -16,6 +16,7 @@ import { Skeleton } from '../components/ui/skeleton';
 import { Checkbox } from '../components/ui/checkbox';
 import { Progress } from '../components/ui/progress';
 import { cn } from '../lib/utils';
+import { useAuth } from '../contexts/AuthContext';
 
 // --- Sample Data ---
 const initialStudents = [
@@ -309,6 +310,8 @@ function exportToCSV(list) {
 
 // --- Component ---
 export default function Students() {
+  const { user, isReadOnly: checkReadOnly } = useAuth();
+  const readOnly = checkReadOnly('students');
   const [students, setStudents] = useState(initialStudents);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -503,14 +506,12 @@ export default function Students() {
             <Download className="h-4 w-4 mr-2" />
             Export CSV
           </Button>
-          {/* TODO: Role check — only Admin and Registrar should see Add Student */}
-          <Button
-            size="sm"
-            onClick={() => setShowAddModal(true)}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Student
-          </Button>
+          {!readOnly && (
+            <Button size="sm" onClick={() => setShowAddModal(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Student
+            </Button>
+          )}
         </div>
       </div>
 
@@ -704,16 +705,17 @@ export default function Students() {
                       >
                         <Eye className="h-4 w-4" />
                       </Button>
-                      {/* TODO: Role check — only Admin and Registrar should see delete */}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-red-500 hover:text-red-700"
-                        onClick={() => handleDeleteStudent(s.id)}
-                        title="Delete student"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      {!readOnly && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-red-500 hover:text-red-700"
+                          onClick={() => handleDeleteStudent(s.id)}
+                          title="Delete student"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>

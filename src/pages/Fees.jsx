@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { cn } from '../lib/utils';
+import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
@@ -153,6 +154,8 @@ function studentName(s) {
 // ──────────────────────────────────────────
 
 export default function Fees() {
+  const { isReadOnly: checkReadOnly } = useAuth();
+  const readOnly = checkReadOnly('fees');
   const [feeRecords, setFeeRecords] = useState(buildInitialFeeRecords);
   const [feeSchedule, setFeeSchedule] = useState(initialFeeSchedule);
   const [activeTab, setActiveTab] = useState('ledger');
@@ -673,7 +676,7 @@ export default function Fees() {
                                           </TableCell>
                                           <TableCell className="py-2 text-center">{feeStatusBadge(record)}</TableCell>
                                           <TableCell className="py-2 text-center">
-                                            {balance > 0 && (
+                                            {balance > 0 && !readOnly && (
                                               <Button
                                                 variant="outline"
                                                 size="sm"
