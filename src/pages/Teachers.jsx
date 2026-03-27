@@ -3,6 +3,8 @@ import { Search, Download, Plus, Eye, Trash2, LayoutGrid, List, AlertTriangle, B
 import { cn } from '../lib/utils';
 import { useAuth } from '../contexts/AuthContext';
 import { useSchoolConfig } from '../contexts/SchoolConfigContext';
+import { isSupabaseConfigured } from '../lib/supabase';
+import { useTeachers as useTeachersHook } from '../hooks/useTeachers';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
@@ -218,8 +220,16 @@ export default function Teachers() {
   const { departmentOptions } = useSchoolConfig();
   const { isReadOnly: checkReadOnly } = useAuth();
   const readOnly = checkReadOnly('teachers');
+  const { teachers: sbTeachers, loading: sbLoading, refetch, create: sbCreate, remove: sbRemove } = useTeachersHook();
   const [teachers, setTeachers] = useState(initialTeachers);
   const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (isSupabaseConfigured && !sbLoading && sbTeachers.length > 0) {
+      setTeachers(sbTeachers);
+      setIsLoading(false);
+    }
+  }, [sbTeachers, sbLoading]);
   const [search, setSearch] = useState('');
   const [filterDepartment, setFilterDepartment] = useState('');
   const [filterType, setFilterType] = useState('');
@@ -313,6 +323,9 @@ export default function Teachers() {
     };
 
     setTeachers(prev => [...prev, created]);
+    if (isSupabaseConfigured) {
+      sbCreate(created).then(() => refetch()).catch(console.error);
+    }
     setShowAddModal(false);
     setNewTeacher(emptyForm);
     setFormErrors({});
@@ -325,15 +338,19 @@ export default function Teachers() {
   }
 
   function confirmAndDelete() {
-    setTeachers(prev => prev.filter(t => t.id !== confirmDelete));
+    const idToDelete = confirmDelete;
+    setTeachers(prev => prev.filter(t => t.id !== idToDelete));
     setSelectedIds(prev => {
       const next = new Set(prev);
-      next.delete(confirmDelete);
+      next.delete(idToDelete);
       return next;
     });
-    if (viewTeacher?.id === confirmDelete) setViewTeacher(null);
+    if (viewTeacher?.id === idToDelete) setViewTeacher(null);
     setConfirmDelete(null);
     setToast({ message: 'Teacher deleted', type: 'success' });
+    if (isSupabaseConfigured) {
+      sbRemove(idToDelete).then(() => refetch()).catch(console.error);
+    }
   }
 
   // TODO: Role check — only Admin and HR should be able to bulk-change status

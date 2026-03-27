@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Megaphone, Plus, Search, Pin, PinOff, Eye, EyeOff,
   Pencil, Trash2, Calendar, Clock, Users, GraduationCap,
@@ -18,6 +18,8 @@ import { Progress } from '../components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { cn } from '../lib/utils';
 import { useAuth } from '../contexts/AuthContext';
+import { isSupabaseConfigured } from '../lib/supabase';
+import { useAnnouncements as useAnnouncementsHook } from '../hooks/useAnnouncements';
 
 // ============================================================
 // SAMPLE DATA
@@ -181,7 +183,15 @@ const emptyForm = {
 export default function Announcements() {
   const { isReadOnly: checkReadOnly } = useAuth();
   const readOnly = checkReadOnly('announcements');
+  const { announcements: sbAnnouncements, loading: sbLoading, refetch, create: sbCreate, update: sbUpdate, remove: sbRemove } = useAnnouncementsHook();
   const [announcements, setAnnouncements] = useState(initialAnnouncements);
+
+  // Sync from Supabase when available
+  useEffect(() => {
+    if (isSupabaseConfigured && !sbLoading && sbAnnouncements.length > 0) {
+      setAnnouncements(sbAnnouncements);
+    }
+  }, [sbAnnouncements, sbLoading]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterAudience, setFilterAudience] = useState('All');
   const [expandedIds, setExpandedIds] = useState(new Set());
@@ -296,6 +306,9 @@ export default function Announcements() {
         readCount: 0,
       };
       setAnnouncements(prev => [newAnnouncement, ...prev]);
+      if (isSupabaseConfigured) {
+        sbCreate(newAnnouncement).then(() => refetch()).catch(console.error);
+      }
       showToast('Announcement posted successfully');
     }
 
@@ -306,14 +319,21 @@ export default function Announcements() {
 
   function handleDelete(id) {
     setAnnouncements(prev => prev.filter(a => a.id !== id));
+    if (isSupabaseConfigured) {
+      sbRemove(id).then(() => refetch()).catch(console.error);
+    }
     setDeleteDialog({ open: false, id: null });
     showToast('Announcement deleted');
   }
 
   function togglePin(id) {
+    const target = announcements.find(a => a.id === id);
     setAnnouncements(prev =>
       prev.map(a => a.id === id ? { ...a, pinned: !a.pinned } : a)
     );
+    if (isSupabaseConfigured && target) {
+      sbUpdate(id, { pinned: !target.pinned }).catch(console.error);
+    }
   }
 
   function toggleExpand(id) {

@@ -1,4 +1,6 @@
-import { createContext, useContext, useState, useMemo, useCallback } from 'react';
+import { createContext, useContext, useState, useMemo, useCallback, useEffect } from 'react';
+import { isSupabaseConfigured } from '../lib/supabase';
+import * as configService from '../services/configService';
 
 const STORAGE_KEY = 'schoolerp_config';
 
@@ -15,7 +17,7 @@ const DEFAULT_CONFIG = {
   schoolYear: '2025-2026',
 };
 
-function loadConfig() {
+function loadLocalConfig() {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
@@ -31,14 +33,57 @@ function loadConfig() {
 const SchoolConfigContext = createContext(null);
 
 export function SchoolConfigProvider({ children }) {
-  const [config, setConfig] = useState(loadConfig);
+  const [config, setConfig] = useState(loadLocalConfig);
+  const [configLoading, setConfigLoading] = useState(isSupabaseConfigured);
 
-  const updateConfig = useCallback((partial) => {
+  // Load from Supabase on mount
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+    let cancelled = false;
+
+    async function load() {
+      try {
+        const remote = await configService.getSchoolConfig();
+        if (remote && !cancelled) {
+          setConfig({
+            gradeLevels: remote.gradeLevels,
+            sections: remote.sections.map(s => ({ name: s.name, gradeLevel: s.gradeLevel })),
+            subjects: remote.subjects,
+            quarters: remote.quarters,
+            schoolYear: remote.schoolYear,
+            // Keep raw rows for ID lookups
+            _gradeLevelRows: remote.gradeLevelRows,
+            _sectionRows: remote.sections,
+            _subjectRows: remote.subjectRows,
+          });
+        }
+      } catch (err) {
+        console.error('Failed to load config from Supabase:', err);
+      } finally {
+        if (!cancelled) setConfigLoading(false);
+      }
+    }
+
+    load();
+    return () => { cancelled = true; };
+  }, []);
+
+  const updateConfig = useCallback(async (partial) => {
     setConfig((prev) => {
       const next = { ...prev, ...partial };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      if (!isSupabaseConfigured) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      }
       return next;
     });
+
+    if (isSupabaseConfigured) {
+      try {
+        await configService.updateSchoolConfig(partial);
+      } catch (err) {
+        console.error('Failed to update config in Supabase:', err);
+      }
+    }
   }, []);
 
   const resetToDefaults = useCallback(() => {
@@ -52,42 +97,58 @@ export function SchoolConfigProvider({ children }) {
     [config.sections],
   );
 
-  // { Rizal: 'Grade 7', Bonifacio: 'Grade 8', ... }
   const sectionGradeMap = useMemo(
     () => Object.fromEntries(config.sections.map((s) => [s.name, s.gradeLevel])),
     [config.sections],
   );
 
-  // { 'Grade 7': 'Rizal', 'Grade 8': 'Bonifacio', ... }
   const gradeSectionMap = useMemo(
     () => Object.fromEntries(config.sections.map((s) => [s.gradeLevel, s.name])),
     [config.sections],
   );
 
-  // [{ id: 'Rizal', label: 'Grade 7 - Rizal' }, ...]
   const sectionLabels = useMemo(
     () => config.sections.map((s) => ({ id: s.name, label: `${s.gradeLevel} - ${s.name}` })),
     [config.sections],
   );
 
-  // Unique departments derived from subjects (used by Teachers)
   const departmentOptions = useMemo(
     () => [...config.subjects],
     [config.subjects],
   );
 
+  // ID lookup helpers for Supabase FK references
+  const gradeLevelIdMap = useMemo(() => {
+    if (!config._gradeLevelRows) return {};
+    return Object.fromEntries(config._gradeLevelRows.map(g => [g.name, g.id]));
+  }, [config._gradeLevelRows]);
+
+  const sectionIdMap = useMemo(() => {
+    if (!config._sectionRows) return {};
+    return Object.fromEntries(config._sectionRows.map(s => [s.name, s.id]));
+  }, [config._sectionRows]);
+
+  const subjectIdMap = useMemo(() => {
+    if (!config._subjectRows) return {};
+    return Object.fromEntries(config._subjectRows.map(s => [s.name, s.id]));
+  }, [config._subjectRows]);
+
   const value = useMemo(
     () => ({
       ...config,
+      configLoading,
       sectionNames,
       sectionGradeMap,
       gradeSectionMap,
       sectionLabels,
       departmentOptions,
+      gradeLevelIdMap,
+      sectionIdMap,
+      subjectIdMap,
       updateConfig,
       resetToDefaults,
     }),
-    [config, sectionNames, sectionGradeMap, gradeSectionMap, sectionLabels, departmentOptions, updateConfig, resetToDefaults],
+    [config, configLoading, sectionNames, sectionGradeMap, gradeSectionMap, sectionLabels, departmentOptions, gradeLevelIdMap, sectionIdMap, subjectIdMap, updateConfig, resetToDefaults],
   );
 
   return (

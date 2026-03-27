@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { SchoolConfigProvider } from './contexts/SchoolConfigContext';
+import { SchoolConfigProvider, useSchoolConfig } from './contexts/SchoolConfigContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { TimeLogProvider } from './contexts/TimeLogContext';
 import ROLE_CONFIG from './data/roleConfig';
@@ -21,8 +21,20 @@ import Settings from './pages/Settings';
 import TimeLogs from './pages/TimeLogs';
 import Payroll from './pages/Payroll';
 
+function LoadingScreen() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="text-center space-y-3">
+        <div className="h-8 w-8 border-3 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
+        <p className="text-sm text-muted-foreground">Loading SchoolERP...</p>
+      </div>
+    </div>
+  );
+}
+
 function AuthenticatedApp() {
-  const { user, isAuthenticated, hasAccess } = useAuth();
+  const { user, isAuthenticated, loading: authLoading, hasAccess } = useAuth();
+  const { configLoading } = useSchoolConfig();
   const [active, setActive] = useState('dashboard');
 
   // Reset to dashboard on login/logout
@@ -38,6 +50,11 @@ function AuthenticatedApp() {
       setActive('dashboard');
     }
   }, [active, user, hasAccess]);
+
+  // Show loading while auth or config is initializing
+  if (authLoading || configLoading) {
+    return <LoadingScreen />;
+  }
 
   if (!isAuthenticated) {
     return <Login />;

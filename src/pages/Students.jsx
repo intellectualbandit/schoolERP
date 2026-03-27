@@ -19,6 +19,8 @@ import { cn } from '../lib/utils';
 import { useAuth } from '../contexts/AuthContext';
 import { useSchoolConfig } from '../contexts/SchoolConfigContext';
 import { useNotifications } from '../contexts/NotificationContext';
+import { isSupabaseConfigured } from '../lib/supabase';
+import { useStudents as useStudentsHook } from '../hooks/useStudents';
 import MOCK_USERS from '../data/mockUsers';
 
 // --- Sample Data ---
@@ -336,12 +338,22 @@ function exportToCSV(list) {
 
 // --- Component ---
 export default function Students() {
-  const { gradeLevels: gradeOptions, sectionNames: sectionOptions } = useSchoolConfig();
+  const { gradeLevels: gradeOptions, sectionNames: sectionOptions, gradeLevelIdMap, sectionIdMap } = useSchoolConfig();
   const { user, isReadOnly: checkReadOnly } = useAuth();
   const { addNotification } = useNotifications();
   const readOnly = checkReadOnly('students');
+  // Supabase data or fallback to mock
+  const { students: sbStudents, loading: sbLoading, refetch, create: sbCreate, update: sbUpdate, remove: sbRemove } = useStudentsHook();
   const [students, setStudents] = useState(initialStudents);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Sync Supabase data when available
+  useEffect(() => {
+    if (isSupabaseConfigured && !sbLoading && sbStudents.length > 0) {
+      setStudents(sbStudents);
+      setIsLoading(false);
+    }
+  }, [sbStudents, sbLoading]);
   const [search, setSearch] = useState('');
   const [filterGrade, setFilterGrade] = useState('');
   const [filterSection, setFilterSection] = useState('');
@@ -460,6 +472,14 @@ export default function Students() {
 
     setStudents(prev => [...prev, created]);
 
+    if (isSupabaseConfigured) {
+      sbCreate({
+        ...created,
+        gradeLevelId: gradeLevelIdMap?.[created.gradeLevel],
+        sectionId: sectionIdMap?.[created.section],
+      }).then(() => refetch()).catch(console.error);
+    }
+
     // Notify admin about new enrollment
     const adminUser = MOCK_USERS.find(u => u.role === 'admin');
     if (adminUser) {
@@ -485,15 +505,20 @@ export default function Students() {
   }
 
   function confirmAndDelete() {
-    setStudents(prev => prev.filter(s => s.id !== confirmDelete));
+    const idToDelete = confirmDelete;
+    setStudents(prev => prev.filter(s => s.id !== idToDelete));
     setSelectedIds(prev => {
       const next = new Set(prev);
-      next.delete(confirmDelete);
+      next.delete(idToDelete);
       return next;
     });
-    if (viewStudent?.id === confirmDelete) setViewStudent(null);
+    if (viewStudent?.id === idToDelete) setViewStudent(null);
     setConfirmDelete(null);
     setToast({ message: 'Student deleted', type: 'success' });
+
+    if (isSupabaseConfigured) {
+      sbRemove(idToDelete).then(() => refetch()).catch(console.error);
+    }
   }
 
   // TODO: Role check — only Admin should be able to bulk-change status

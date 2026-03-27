@@ -21,16 +21,21 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(null);
 
-  const handleDemoLogin = (role) => {
+  const handleDemoLogin = async (role) => {
     setLoading(role);
     setError('');
-    setTimeout(() => {
-      login(role);
-      setLoading(null);
-    }, 300);
+    try {
+      const result = await login(role);
+      if (!result.success) {
+        setError(result.error);
+      }
+    } catch (err) {
+      setError('Login failed. Please try again.');
+    }
+    setLoading(null);
   };
 
-  const handleCredentialLogin = (e) => {
+  const handleCredentialLogin = async (e) => {
     e.preventDefault();
     setError('');
     if (!email || !password) {
@@ -38,13 +43,15 @@ export default function Login() {
       return;
     }
     setLoading('credentials');
-    setTimeout(() => {
-      const result = login(email, password);
+    try {
+      const result = await login(email, password);
       if (!result.success) {
         setError(result.error);
       }
-      setLoading(null);
-    }, 300);
+    } catch (err) {
+      setError('Login failed. Please try again.');
+    }
+    setLoading(null);
   };
 
   return (

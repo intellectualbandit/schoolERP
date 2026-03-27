@@ -2,6 +2,8 @@ import { useState, useMemo, useEffect } from 'react';
 import { cn } from '../lib/utils';
 import { useAuth } from '../contexts/AuthContext';
 import { useSchoolConfig } from '../contexts/SchoolConfigContext';
+import { isSupabaseConfigured } from '../lib/supabase';
+import { useGradeMap as useGradeMapHook, useGradeReleases as useGradeReleasesHook } from '../hooks/useGrades';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
@@ -105,7 +107,17 @@ export default function Grades() {
   const { subjects, sectionNames: sectionOptions, sectionGradeMap, quarters } = useSchoolConfig();
   const { isReadOnly: checkReadOnly } = useAuth();
   const readOnly = checkReadOnly('grades');
+  const studentIds = useMemo(() => classRoster.map(s => s.id), []);
+  const { gradeMap: sbGradeMap, loading: sbGradesLoading, refetch: refetchGrades } = useGradeMapHook(studentIds);
+  const { releases: sbReleases, refetch: refetchReleases, setRelease: sbSetRelease } = useGradeReleasesHook();
   const [grades, setGrades] = useState(() => buildInitialGrades(quarters));
+
+  useEffect(() => {
+    if (isSupabaseConfigured && !sbGradesLoading && Object.keys(sbGradeMap).length > 0) {
+      setGrades(prev => ({ ...prev, ...sbGradeMap }));
+      setIsLoading(false);
+    }
+  }, [sbGradeMap, sbGradesLoading]);
   const [activeQuarter, setActiveQuarter] = useState('Q1');
   const [filterSection, setFilterSection] = useState('Rizal');
   const [filterSubject, setFilterSubject] = useState('');

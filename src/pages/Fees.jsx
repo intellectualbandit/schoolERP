@@ -2,6 +2,8 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { cn } from '../lib/utils';
 import { useAuth } from '../contexts/AuthContext';
 import { useSchoolConfig } from '../contexts/SchoolConfigContext';
+import { isSupabaseConfigured } from '../lib/supabase';
+import { useFees as useFeesHook } from '../hooks/useFees';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
@@ -157,8 +159,15 @@ export default function Fees() {
   const { sectionGradeMap, gradeLevels: gradeOptions } = useSchoolConfig();
   const { isReadOnly: checkReadOnly } = useAuth();
   const readOnly = checkReadOnly('fees');
+  const { feeRecords: sbFeeRecords, loading: sbFeesLoading, refetch: refetchFees, addPayment: sbAddPayment } = useFeesHook();
   const [feeRecords, setFeeRecords] = useState(buildInitialFeeRecords);
   const [feeSchedule, setFeeSchedule] = useState(initialFeeSchedule);
+
+  useEffect(() => {
+    if (isSupabaseConfigured && !sbFeesLoading && sbFeeRecords.length > 0) {
+      setFeeRecords(sbFeeRecords);
+    }
+  }, [sbFeeRecords, sbFeesLoading]);
   const [activeTab, setActiveTab] = useState('ledger');
 
   // Filters

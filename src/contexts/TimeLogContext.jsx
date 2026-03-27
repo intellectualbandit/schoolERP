@@ -1,4 +1,6 @@
-import { createContext, useContext, useState, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { isSupabaseConfigured } from '../lib/supabase';
+import * as timeLogService from '../services/timeLogService';
 
 const STORAGE_KEY = 'schoolerp_timelogs';
 const EXPECTED_TIME = '07:30';
@@ -35,12 +37,35 @@ const TimeLogContext = createContext(null);
 export function TimeLogProvider({ children }) {
   const [logs, setLogs] = useState(loadLogs);
 
-  const persist = useCallback((next) => {
-    setLogs(next);
-    saveLogs(next);
+  // Load from Supabase on mount
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+    timeLogService.getTimeLogs().then(data => {
+      if (data) setLogs(data);
+    }).catch(console.error);
   }, []);
 
-  const clockIn = useCallback((user) => {
+  const persist = useCallback((next) => {
+    setLogs(next);
+    if (!isSupabaseConfigured) saveLogs(next);
+  }, []);
+
+  const clockIn = useCallback(async (user) => {
+    if (isSupabaseConfigured) {
+      try {
+        const log = await timeLogService.clockIn(user);
+        if (log) {
+          const data = await timeLogService.getTimeLogs();
+          setLogs(data);
+          return log;
+        }
+      } catch (err) {
+        console.error('Clock in failed:', err);
+      }
+      return null;
+    }
+
+    // Fallback: localStorage
     const current = loadLogs();
     const today = todayStr();
     const existing = current.find(l => l.userId === user.id && l.date === today);
@@ -62,7 +87,19 @@ export function TimeLogProvider({ children }) {
     return log;
   }, [persist]);
 
-  const clockOut = useCallback((userId) => {
+  const clockOut = useCallback(async (userId) => {
+    if (isSupabaseConfigured) {
+      try {
+        await timeLogService.clockOut(userId);
+        const data = await timeLogService.getTimeLogs();
+        setLogs(data);
+      } catch (err) {
+        console.error('Clock out failed:', err);
+      }
+      return;
+    }
+
+    // Fallback: localStorage
     const current = loadLogs();
     const today = todayStr();
     const updated = current.map(l => {

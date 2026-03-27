@@ -1,5 +1,7 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { isSupabaseConfigured } from '../lib/supabase';
+import { useWellness as useWellnessHook, useCounselorNotes as useCounselorNotesHook } from '../hooks/useWellness';
 import {
   Heart, AlertTriangle, TrendingUp, MessageSquare,
   Search, ChevronDown, ChevronRight, Clock,
@@ -188,6 +190,8 @@ export default function Wellness() {
   const [selectedSection, setSelectedSection] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStudent, setSelectedStudent] = useState(null);
+  const { moods: sbMoods, setMood: sbSetMood } = useWellnessHook();
+  const { notes: sbNotes, addNote: sbAddNote, refetch: refetchNotes } = useCounselorNotesHook();
   const [counselorNotes, setCounselorNotes] = useState(INITIAL_NOTES);
   const [newNoteText, setNewNoteText] = useState('');
   const [checkInMood, setCheckInMood] = useState(null);
@@ -239,25 +243,31 @@ export default function Wellness() {
   const handleCheckIn = useCallback((mood) => {
     setCheckInMood(mood);
     setCheckInSubmitted(true);
+    if (isSupabaseConfigured) {
+      const today = new Date().toISOString().split('T')[0];
+      sbSetMood(null, today, mood).catch(console.error); // studentId from auth context
+    }
     setTimeout(() => {
       setCheckInSubmitted(false);
       setCheckInMood(null);
     }, 3000);
-  }, []);
+  }, [sbSetMood]);
 
   const handleAddNote = useCallback(
     (studentId) => {
       if (!newNoteText.trim()) return;
+      const note = { id: Date.now(), text: newNoteText.trim(), date: TODAY, counselor: 'Current User' };
       setCounselorNotes((prev) => ({
         ...prev,
-        [studentId]: [
-          ...(prev[studentId] || []),
-          { id: Date.now(), text: newNoteText.trim(), date: TODAY, counselor: 'Current User' },
-        ],
+        [studentId]: [...(prev[studentId] || []), note],
       }));
+      if (isSupabaseConfigured) {
+        sbAddNote({ studentId, text: note.text, date: note.date, counselor: note.counselor })
+          .then(() => refetchNotes()).catch(console.error);
+      }
       setNewNoteText('');
     },
-    [newNoteText]
+    [newNoteText, sbAddNote, refetchNotes]
   );
 
   // ---- Render ----

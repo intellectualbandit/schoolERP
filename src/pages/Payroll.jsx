@@ -1,4 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { isSupabaseConfigured } from '../lib/supabase';
+import { usePayroll as usePayrollHook } from '../hooks/usePayroll';
 import { Banknote, FileText, Users, DollarSign, CheckCircle, Clock, ArrowRight, Eye, Printer } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
@@ -69,10 +71,17 @@ function savePayroll(data) {
 }
 
 export default function Payroll() {
+  const { payslips: sbPayslips, loading: sbPayLoading, refetch: refetchPayroll, generate: sbGenerate, updateStatus: sbUpdateStatus } = usePayrollHook();
   const [activeTab, setActiveTab] = useState('payslips');
   const [payslips, setPayslips] = useState(loadPayroll);
   const [selectedPeriod, setSelectedPeriod] = useState(payPeriods[0].id);
   const [viewPayslip, setViewPayslip] = useState(null);
+
+  useEffect(() => {
+    if (isSupabaseConfigured && !sbPayLoading && sbPayslips.length > 0) {
+      setPayslips(sbPayslips);
+    }
+  }, [sbPayslips, sbPayLoading]);
 
   const periodPayslips = useMemo(() => {
     return payslips.filter(p => p.periodId === selectedPeriod);

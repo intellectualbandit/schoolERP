@@ -1,4 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { isSupabaseConfigured } from '../lib/supabase';
+import { useBehavior as useBehaviorHook } from '../hooks/useBehavior';
 import {
   ClipboardList, Plus, Search, Filter, AlertTriangle, CheckCircle,
   TrendingUp, TrendingDown, Users, Sparkles, Calendar, Clock,
@@ -153,8 +155,16 @@ export default function Behavior() {
   const { sectionLabels: SECTIONS } = useSchoolConfig();
   const { isReadOnly: checkReadOnly } = useAuth();
   const readOnly = checkReadOnly('behavior');
+  const { incidents: sbIncidents, loading: sbLoading, refetch: refetchIncidents, create: sbCreateIncident } = useBehaviorHook();
   const [incidents, setIncidents] = useState(initialIncidents);
   const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (isSupabaseConfigured && !sbLoading && sbIncidents.length > 0) {
+      setIncidents(sbIncidents);
+      setIsLoading(false);
+    }
+  }, [sbIncidents, sbLoading]);
   const [showLogModal, setShowLogModal] = useState(false);
   const [viewStudent, setViewStudent] = useState(null);
   const [toast, setToast] = useState(null);
@@ -308,6 +318,9 @@ export default function Behavior() {
     };
 
     setIncidents((prev) => [...prev, newIncident]);
+    if (isSupabaseConfigured) {
+      sbCreateIncident(newIncident).then(() => refetchIncidents()).catch(console.error);
+    }
     setFormData(defaultFormState);
     setFormErrors({});
     setShowLogModal(false);
@@ -315,7 +328,7 @@ export default function Behavior() {
     const student = getStudentById(parseInt(formData.studentId));
     const typeLabel = formData.type === 'Positive' ? 'Commendation' : 'Incident';
     showToast(`${typeLabel} logged for ${getStudentName(student)}`);
-  }, [formData, showToast]);
+  }, [formData, showToast, sbCreateIncident, refetchIncidents]);
 
   const handleOpenLogModal = useCallback((presetType) => {
     setFormData({ ...defaultFormState, type: presetType || '' });

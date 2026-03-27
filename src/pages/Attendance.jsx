@@ -3,6 +3,8 @@ import { cn } from '../lib/utils';
 import { useAuth } from '../contexts/AuthContext';
 import { useSchoolConfig } from '../contexts/SchoolConfigContext';
 import { useNotifications } from '../contexts/NotificationContext';
+import { isSupabaseConfigured } from '../lib/supabase';
+import { useAttendance as useAttendanceHook } from '../hooks/useAttendance';
 import MOCK_USERS from '../data/mockUsers';
 import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
@@ -96,7 +98,15 @@ export default function Attendance() {
   const { isReadOnly: checkReadOnly, user } = useAuth();
   const { addNotification, notifications } = useNotifications();
   const readOnly = checkReadOnly('attendance');
+  const { records: sbRecords, loading: sbAttLoading, refetch: refetchAttendance, save: sbSaveAttendance } = useAttendanceHook();
   const [attendanceHistory, setAttendanceHistory] = useState(initialAttendanceHistory);
+
+  useEffect(() => {
+    if (isSupabaseConfigured && !sbAttLoading && sbRecords.length > 0) {
+      setAttendanceHistory(sbRecords);
+      setIsLoading(false);
+    }
+  }, [sbRecords, sbAttLoading]);
   const [excuseRequests, setExcuseRequests] = useState(loadExcuseRequests);
   const [isLoading, setIsLoading] = useState(true);
   const [toast, setToast] = useState(null);
@@ -307,6 +317,16 @@ export default function Attendance() {
 
     // Auto-notify parents about absences
     notifyAbsences(currentRecords, selectedDate, selectedSection, selectedSubject);
+
+    if (isSupabaseConfigured) {
+      sbSaveAttendance({
+        date: selectedDate,
+        sectionId: null, // resolved by service from section name
+        subjectId: null,
+        marks: currentRecords,
+        savedBy: user?.id,
+      }).then(() => refetchAttendance()).catch(console.error);
+    }
 
     setHasUnsavedChanges(false);
     setShowSaveConfirm(false);

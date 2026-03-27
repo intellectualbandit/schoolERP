@@ -17,6 +17,8 @@ import { Avatar, AvatarFallback } from '../components/ui/avatar';
 import { Skeleton } from '../components/ui/skeleton';
 import { cn } from '../lib/utils';
 import { useAuth } from '../contexts/AuthContext';
+import { isSupabaseConfigured } from '../lib/supabase';
+import { useAlumni as useAlumniHook } from '../hooks/useAlumni';
 
 // --- Sample Alumni Data ---
 const initialAlumni = [
@@ -247,6 +249,7 @@ const feedTypeConfig = {
 export default function Alumni() {
   const { isReadOnly: checkReadOnly } = useAuth();
   const readOnly = checkReadOnly('alumni');
+  const { alumni: sbAlumni, loading: sbLoading, refetch, create: sbCreate, update: sbUpdate, remove: sbRemove } = useAlumniHook();
   const [alumni, setAlumni] = useState(initialAlumni);
   const [search, setSearch] = useState('');
   const [filterYear, setFilterYear] = useState('');
@@ -258,8 +261,17 @@ export default function Alumni() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 600);
-    return () => clearTimeout(timer);
+    if (isSupabaseConfigured && !sbLoading) {
+      if (sbAlumni.length > 0) setAlumni(sbAlumni);
+      setLoading(false);
+    }
+  }, [sbAlumni, sbLoading]);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured) {
+      const timer = setTimeout(() => setLoading(false), 600);
+      return () => clearTimeout(timer);
+    }
   }, []);
 
   useEffect(() => {
@@ -344,14 +356,20 @@ export default function Alumni() {
             : a
         )
       );
+      if (isSupabaseConfigured) {
+        sbUpdate(editingId, { ...form, graduationYear: Number(form.graduationYear) }).then(() => refetch()).catch(console.error);
+      }
       setToast({ type: 'success', message: 'Alumni record updated successfully.' });
     } else {
       const newAlumnus = {
         ...form,
-        id: Math.max(...alumni.map(a => a.id)) + 1,
+        id: Math.max(...alumni.map(a => a.id), 0) + 1,
         graduationYear: Number(form.graduationYear),
       };
       setAlumni(prev => [...prev, newAlumnus]);
+      if (isSupabaseConfigured) {
+        sbCreate(newAlumnus).then(() => refetch()).catch(console.error);
+      }
       setToast({ type: 'success', message: 'New alumni added successfully.' });
     }
     setShowModal(false);
@@ -359,6 +377,9 @@ export default function Alumni() {
 
   const handleDelete = (id) => {
     setAlumni(prev => prev.filter(a => a.id !== id));
+    if (isSupabaseConfigured) {
+      sbRemove(id).then(() => refetch()).catch(console.error);
+    }
     setToast({ type: 'success', message: 'Alumni record removed.' });
   };
 
