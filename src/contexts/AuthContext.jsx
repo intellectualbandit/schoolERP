@@ -105,20 +105,23 @@ export function AuthProvider({ children }) {
     mountedRef.current = true;
 
     async function init() {
-      if (isSupabaseConfigured) {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-          const profile = await fetchUserProfile(session.user);
-          if (mountedRef.current) setUser(profile);
-        }
-      } else {
-        // Fallback: check sessionStorage for mock user
-        try {
+      try {
+        if (isSupabaseConfigured) {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.user) {
+            const profile = await fetchUserProfile(session.user);
+            if (mountedRef.current) setUser(profile);
+          }
+        } else {
+          // Fallback: check sessionStorage for mock user
           const stored = sessionStorage.getItem('erp_user');
           if (stored) setUser(JSON.parse(stored));
-        } catch { /* ignore */ }
+        }
+      } catch (err) {
+        console.error('Auth init failed:', err);
+      } finally {
+        if (mountedRef.current) setLoading(false);
       }
-      if (mountedRef.current) setLoading(false);
     }
 
     init();

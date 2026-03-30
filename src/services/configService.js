@@ -3,17 +3,22 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase';
 export async function getSchoolConfig() {
   if (!isSupabaseConfigured) return null;
 
-  const [
-    { data: config },
-    { data: gradeLevels },
-    { data: sections },
-    { data: subjects },
-  ] = await Promise.all([
+  const [configRes, gradeLevelsRes, sectionsRes, subjectsRes] = await Promise.all([
     supabase.from('school_config').select('*').eq('id', 1).single(),
     supabase.from('grade_levels').select('*').order('sort_order'),
     supabase.from('sections').select('*, grade_levels(name)').order('id'),
     supabase.from('subjects').select('*').order('sort_order'),
   ]);
+
+  if (configRes.error) console.error('school_config error:', configRes.error.message);
+  if (gradeLevelsRes.error) console.error('grade_levels error:', gradeLevelsRes.error.message);
+  if (sectionsRes.error) console.error('sections error:', sectionsRes.error.message);
+  if (subjectsRes.error) console.error('subjects error:', subjectsRes.error.message);
+
+  const config = configRes.data;
+  const gradeLevels = gradeLevelsRes.data;
+  const sections = sectionsRes.data;
+  const subjects = subjectsRes.data;
 
   return {
     schoolYear: config?.school_year || '2025-2026',
