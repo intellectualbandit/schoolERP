@@ -449,7 +449,7 @@ export default function Students() {
     setWizardStep(prev => prev - 1);
   }
 
-  function handleEnrollStudent() {
+  async function handleEnrollStudent() {
     const assignedFees = (feeSchedule[newStudent.gradeLevel] || []).map(f => ({
       ...f, paid: 0, status: 'Unpaid',
     }));
@@ -463,21 +463,28 @@ export default function Students() {
       guardianName: newStudent.guardianName.trim(),
       guardianContact: newStudent.guardianContact.trim(),
       id: Date.now(),
-      status: 'Enrolled',
+      status: 'Active',
       enrolledDate: new Date().toISOString().split('T')[0],
       grades: [],
       attendance: { present: 0, absent: 0, late: 0, total: 0 },
       fees: assignedFees,
     };
 
-    setStudents(prev => [...prev, created]);
-
     if (isSupabaseConfigured) {
-      sbCreate({
-        ...created,
-        gradeLevelId: gradeLevelIdMap?.[created.gradeLevel],
-        sectionId: sectionIdMap?.[created.section],
-      }).then(() => refetch()).catch(console.error);
+      try {
+        await sbCreate({
+          ...created,
+          gradeLevelId: gradeLevelIdMap?.[created.gradeLevel],
+          sectionId: sectionIdMap?.[created.section],
+        });
+        await refetch();
+      } catch (err) {
+        console.error('Student create failed:', err);
+        setToast({ message: `Save failed: ${err.message}`, type: 'error' });
+        return;
+      }
+    } else {
+      setStudents(prev => [...prev, created]);
     }
 
     // Notify admin about new enrollment
@@ -517,7 +524,10 @@ export default function Students() {
     setToast({ message: 'Student deleted', type: 'success' });
 
     if (isSupabaseConfigured) {
-      sbRemove(idToDelete).then(() => refetch()).catch(console.error);
+      sbRemove(idToDelete).then(() => refetch()).catch(err => {
+        console.error(err);
+        setToast({ message: `Delete failed: ${err.message}`, type: 'error' });
+      });
     }
   }
 

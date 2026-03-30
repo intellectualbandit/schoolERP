@@ -7,14 +7,14 @@ const AuthContext = createContext(null);
 
 // Demo credentials map: role → email/password (for quick-login buttons)
 const DEMO_CREDENTIALS = {
-  admin:      { email: 'admin@school.edu.ph',                    password: 'admin123' },
-  principal:  { email: 'principal@school.edu.ph',                 password: 'principal123' },
-  teacher:    { email: 'rosa.montoya@school.edu.ph',              password: 'teacher123' },
-  student:    { email: 'juan.delacruz@student.school.edu.ph',     password: 'student123' },
-  parent:     { email: 'maria.delacruz@parent.school.edu.ph',     password: 'parent123' },
-  registrar:  { email: 'registrar@school.edu.ph',                 password: 'registrar123' },
-  cashier:    { email: 'cashier@school.edu.ph',                   password: 'cashier123' },
-  counselor:  { email: 'counselor@school.edu.ph',                 password: 'counselor123' },
+  admin:      { email: 'admin@school.edu.ph',                    password: 'Demo1234!' },
+  principal:  { email: 'principal@school.edu.ph',                 password: 'Demo1234!' },
+  teacher:    { email: 'rosa.montoya@school.edu.ph',              password: 'Demo1234!' },
+  student:    { email: 'juan.delacruz@student.school.edu.ph',     password: 'Demo1234!' },
+  parent:     { email: 'maria.delacruz@parent.school.edu.ph',     password: 'Demo1234!' },
+  registrar:  { email: 'registrar@school.edu.ph',                 password: 'Demo1234!' },
+  cashier:    { email: 'cashier@school.edu.ph',                   password: 'Demo1234!' },
+  counselor:  { email: 'counselor@school.edu.ph',                 password: 'Demo1234!' },
 };
 
 /**

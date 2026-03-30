@@ -214,9 +214,9 @@ export default function Login() {
               <div className="mt-4 p-3 bg-muted/60 rounded-lg border border-border/50">
                 <p className="text-[11px] font-semibold text-muted-foreground mb-2 uppercase tracking-wider">Demo Credentials</p>
                 <div className="grid grid-cols-2 gap-1 text-[11px] text-muted-foreground">
-                  <span>admin@school.edu.ph</span><span className="font-mono">admin123</span>
-                  <span>rosa.montoya@school.edu.ph</span><span className="font-mono">teacher123</span>
-                  <span>juan.delacruz@student.school.edu.ph</span><span className="font-mono">student123</span>
+                  <span>admin@school.edu.ph</span><span className="font-mono">Demo1234!</span>
+                  <span>rosa.montoya@school.edu.ph</span><span className="font-mono">Demo1234!</span>
+                  <span>juan.delacruz@student.school.edu.ph</span><span className="font-mono">Demo1234!</span>
                 </div>
               </div>
             </TabsContent>
