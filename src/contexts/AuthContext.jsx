@@ -100,49 +100,39 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const mountedRef = useRef(true);
 
-  // On mount: check existing Supabase session or fall back to sessionStorage
+  // On mount: use onAuthStateChange for session init (avoids lock conflict with getSession)
   useEffect(() => {
     mountedRef.current = true;
 
-    async function init() {
+    if (!isSupabaseConfigured) {
+      // Fallback: check sessionStorage for mock user
       try {
-        if (isSupabaseConfigured) {
-          const { data: { session } } = await supabase.auth.getSession();
-          if (session?.user) {
-            const profile = await fetchUserProfile(session.user);
-            if (mountedRef.current) setUser(profile);
-          }
-        } else {
-          // Fallback: check sessionStorage for mock user
-          const stored = sessionStorage.getItem('erp_user');
-          if (stored) setUser(JSON.parse(stored));
-        }
-      } catch (err) {
-        console.error('Auth init failed:', err);
-      } finally {
-        if (mountedRef.current) setLoading(false);
-      }
+        const stored = sessionStorage.getItem('erp_user');
+        if (stored) setUser(JSON.parse(stored));
+      } catch { /* ignore */ }
+      setLoading(false);
+      return;
     }
 
-    init();
-
-    // Listen for Supabase auth state changes
-    let subscription;
-    if (isSupabaseConfigured) {
-      const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
-        if (event === 'SIGNED_OUT') {
+    // onAuthStateChange fires INITIAL_SESSION on setup, then SIGNED_IN / SIGNED_OUT later
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      try {
+        if (event === 'SIGNED_OUT' || !session?.user) {
           if (mountedRef.current) setUser(null);
-        } else if (event === 'SIGNED_IN' && session?.user) {
+        } else if (session?.user) {
           const profile = await fetchUserProfile(session.user);
           if (mountedRef.current) setUser(profile);
         }
-      });
-      subscription = data.subscription;
-    }
+      } catch (err) {
+        console.error('Auth state change error:', err);
+      } finally {
+        if (mountedRef.current) setLoading(false);
+      }
+    });
 
     return () => {
       mountedRef.current = false;
-      subscription?.unsubscribe();
+      subscription.unsubscribe();
     };
   }, []);
 
