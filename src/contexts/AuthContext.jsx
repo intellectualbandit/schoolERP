@@ -17,6 +17,14 @@ const DEMO_CREDENTIALS = {
   counselor:  { email: 'counselor@school.edu.ph',                 password: 'Demo1234!' },
 };
 
+/** Race a promise against a timeout (ms). */
+function withTimeout(promise, ms) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error('Request timed out')), ms)),
+  ]);
+}
+
 /**
  * Fetch user profile + linked data from Supabase after auth.
  */
@@ -135,8 +143,12 @@ export function AuthProvider({ children }) {
       if (event === 'SIGNED_OUT') {
         if (mountedRef.current) setUser(null);
       } else if (event === 'SIGNED_IN' && session?.user) {
-        const profile = await fetchUserProfile(session.user);
-        if (mountedRef.current) setUser(profile);
+        try {
+          const profile = await withTimeout(fetchUserProfile(session.user), 10000);
+          if (mountedRef.current) setUser(profile);
+        } catch (err) {
+          console.error('Auth state change profile fetch failed:', err);
+        }
       }
     });
 
@@ -165,16 +177,27 @@ export function AuthProvider({ children }) {
         pass = DEMO_CREDENTIALS[emailOrRole].password;
       }
 
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password: pass,
-      });
+      let data, error;
+      try {
+        ({ data, error } = await withTimeout(
+          supabase.auth.signInWithPassword({ email, password: pass }),
+          15000
+        ));
+      } catch (e) {
+        return { success: false, error: 'Login timed out. Please try again.' };
+      }
 
       if (error) {
         return { success: false, error: error.message };
       }
 
-      const profile = await fetchUserProfile(data.user);
+      let profile;
+      try {
+        profile = await withTimeout(fetchUserProfile(data.user), 10000);
+      } catch (e) {
+        return { success: false, error: 'Failed to load profile. Please try again.' };
+      }
+
       if (!profile) {
         return { success: false, error: 'User profile not found. Please contact admin.' };
       }

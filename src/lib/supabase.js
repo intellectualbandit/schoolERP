@@ -11,7 +11,14 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 export const supabase = supabaseUrl && supabaseAnonKey
-  ? createClient(supabaseUrl, supabaseAnonKey)
+  ? createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        persistSession: true,
+        detectSessionInUrl: false,
+        // Avoid navigator.locks which can hang in some browsers
+        lock: false,
+      },
+    })
   : null;
 
 /** true when Supabase is configured and available */
