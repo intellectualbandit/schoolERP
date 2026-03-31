@@ -65,7 +65,13 @@ export function SchoolConfigProvider({ children }) {
     }
 
     load();
-    return () => { cancelled = true; };
+
+    // Safety timeout — fall back to defaults if Supabase is slow
+    const timeout = setTimeout(() => {
+      if (!cancelled) setConfigLoading(false);
+    }, 8000);
+
+    return () => { cancelled = true; clearTimeout(timeout); };
   }, []);
 
   const updateConfig = useCallback(async (partial) => {

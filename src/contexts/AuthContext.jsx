@@ -100,12 +100,11 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const mountedRef = useRef(true);
 
-  // On mount: use onAuthStateChange for session init (avoids lock conflict with getSession)
+  // On mount: check existing session, then listen for changes
   useEffect(() => {
     mountedRef.current = true;
 
     if (!isSupabaseConfigured) {
-      // Fallback: check sessionStorage for mock user
       try {
         const stored = sessionStorage.getItem('erp_user');
         if (stored) setUser(JSON.parse(stored));
@@ -114,25 +113,42 @@ export function AuthProvider({ children }) {
       return;
     }
 
-    // onAuthStateChange fires INITIAL_SESSION on setup, then SIGNED_IN / SIGNED_OUT later
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    // 1. Get initial session
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       try {
-        if (event === 'SIGNED_OUT' || !session?.user) {
-          if (mountedRef.current) setUser(null);
-        } else if (session?.user) {
+        if (session?.user) {
           const profile = await fetchUserProfile(session.user);
           if (mountedRef.current) setUser(profile);
         }
       } catch (err) {
-        console.error('Auth state change error:', err);
+        console.error('Auth init error:', err);
       } finally {
         if (mountedRef.current) setLoading(false);
       }
+    }).catch(() => {
+      if (mountedRef.current) setLoading(false);
     });
+
+    // 2. Listen for future auth changes (ignore INITIAL_SESSION to avoid double-processing)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'INITIAL_SESSION') return;
+      if (event === 'SIGNED_OUT') {
+        if (mountedRef.current) setUser(null);
+      } else if (event === 'SIGNED_IN' && session?.user) {
+        const profile = await fetchUserProfile(session.user);
+        if (mountedRef.current) setUser(profile);
+      }
+    });
+
+    // 3. Safety timeout — never stay on loading screen forever
+    const timeout = setTimeout(() => {
+      if (mountedRef.current) setLoading(false);
+    }, 8000);
 
     return () => {
       mountedRef.current = false;
       subscription.unsubscribe();
+      clearTimeout(timeout);
     };
   }, []);
 
